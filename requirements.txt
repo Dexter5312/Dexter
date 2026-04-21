@@ -1,5 +1,5 @@
-flask
-flask-cors
-flask-bcrypt
-PyJWT
-gunicorn
+fastapi
+uvicorn
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt
