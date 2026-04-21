@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E2EE Messenger</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div id="app">
+        <!-- Auth View -->
+        <div id="auth-view" class="view active">
+            <div class="auth-container">
+                <div class="auth-box">
+                    <div class="auth-logo">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <h1>SecureChat</h1>
+                    </div>
+                    <p class="auth-subtitle">End-to-End Encrypted Messaging</p>
+                    
+                    <div class="auth-tabs">
+                        <button class="tab-btn active" onclick="ui.switchAuthTab('login')">Login</button>
+                        <button class="tab-btn" onclick="ui.switchAuthTab('register')">Register</button>
+                    </div>
+
+                    <form id="auth-form" onsubmit="ui.handleAuth(event)">
+                        <div class="form-group">
+                            <label>Username</label>
+                            <input type="text" id="username" required autocomplete="off">
+                        </div>
+                        <div class="form-group">
+                            <label>Password</label>
+                            <input type="password" id="password" required>
+                        </div>
+                        <button type="submit" class="btn primary-btn" id="auth-submit-btn">Login</button>
+                        <p id="auth-error" class="error-msg"></p>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Dashboard View -->
+        <div id="dashboard-view" class="view">
+            <div class="sidebar">
+                <div class="sidebar-header">
+                    <div class="user-profile">
+                        <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                        <span id="current-username">User</span>
+                    </div>
+                    <button class="icon-btn" onclick="ui.logout()" title="Logout"><i class="fa-solid fa-sign-out-alt"></i></button>
+                </div>
+
+                <div class="sidebar-search">
+                    <button class="btn primary-btn" onclick="ui.openFriendRequestsView()" style="display:flex; align-items:center; justify-content:center; gap:10px;">
+                        <i class="fa-solid fa-user-plus"></i> Friends & Requests
+                        <span id="request-count-badge" class="badge" style="margin-left:auto;">0</span>
+                    </button>
+                </div>
+
+                <div class="sidebar-sections">
+                    <div class="section">
+                        <h3 class="section-title">Chats</h3>
+                        <div id="friends-list" class="list-container"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="main-chat">
+                <div id="chat-placeholder" class="chat-placeholder active">
+                    <i class="fa-solid fa-comments"></i>
+                    <h2>Select a chat to start messaging</h2>
+                    <p>All messages are end-to-end encrypted.</p>
+                </div>
+
+                <div id="chat-active" class="chat-active">
+                    <div class="chat-header">
+                        <div class="avatar-wrapper">
+                            <div class="avatar"><i class="fa-solid fa-user"></i></div>
+                            <div class="status-indicator online"></div>
+                        </div>
+                        <div class="chat-header-info">
+                            <span id="active-chat-username">Friend</span>
+                            <span class="status-text">Online — Secure Connection</span>
+                        </div>
+                        <div class="encryption-badge" title="End-to-End Encrypted">
+                            <i class="fa-solid fa-shield-halved"></i> E2EE Active
+                        </div>
+                    </div>
+                    
+                    <div class="chat-messages" id="chat-messages">
+                        <!-- Messages go here -->
+                    </div>
+
+                    <div class="chat-input-container">
+                        <div class="chat-input-area">
+                            <form onsubmit="ui.handleSendMessage(event)">
+                                <button type="button" class="btn icon-btn attach-btn"><i class="fa-solid fa-paperclip"></i></button>
+                                <input type="text" id="message-input" placeholder="Type an encrypted message..." autocomplete="off">
+                                <button type="submit" class="btn icon-btn send-btn"><i class="fa-solid fa-paper-plane"></i></button>
+                            </form>
+                        </div>
+                        <div class="secure-footer">
+                            <i class="fa-solid fa-lock"></i> Messages are end-to-end encrypted. No one outside of this chat, not even the server, can read them.
+                        </div>
+                    </div>
+                </div>
+
+                <div id="requests-view" class="requests-view">
+                    <div class="chat-header">
+                        <span><i class="fa-solid fa-user-friends"></i> Friends & Requests</span>
+                    </div>
+                    
+                    <div class="requests-container">
+                        <div class="requests-card">
+                            <h3><i class="fa-solid fa-search"></i> Find Friends</h3>
+                            <p class="text-muted" style="font-size: 0.9rem; margin: 10px 0 20px 0;">Search for users by their exact username to send an encrypted friend request.</p>
+                            <form onsubmit="ui.handleSearchUser(event)" class="search-form">
+                                <div class="search-input-wrapper" style="flex:1;">
+                                    <i class="fa-solid fa-at"></i>
+                                    <input type="text" id="search-username" placeholder="Username" autocomplete="off" required>
+                                </div>
+                                <button type="submit" class="btn primary-btn" style="width: auto; padding: 12px 24px;">Send Request</button>
+                            </form>
+                        </div>
+
+                        <div class="requests-card">
+                            <h3><i class="fa-solid fa-bell"></i> Pending Requests <span id="request-count" class="badge">0</span></h3>
+                            <div id="requests-list-page" class="requests-grid">
+                                <!-- Requests go here -->
+                            </div>
+                        </div>
+                        
+                        <div class="requests-card">
+                            <h3><i class="fa-solid fa-paper-plane"></i> Sent Requests</h3>
+                            <div id="sent-requests-list" class="requests-grid">
+                                <!-- Sent Requests go here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals & Overlays -->
+    <div id="loading-overlay" class="overlay">
+        <div class="spinner"></div>
+        <p id="loading-text">Loading...</p>
+    </div>
+
+    <script src="/static/js/crypto.js"></script>
+    <script src="/static/js/api.js"></script>
+    <script src="/static/js/ui.js"></script>
+    <script src="/static/js/main.js"></script>
+</body>
+</html>
