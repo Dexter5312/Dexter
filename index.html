@@ -56,8 +56,10 @@
                         <div class="avatar"><i class="fa-solid fa-user"></i></div>
                         <span id="current-username">User</span>
                     </div>
-                    <button class="icon-btn" onclick="ui.logout()" title="Logout"><i
-                            class="fa-solid fa-sign-out-alt"></i></button>
+                    <div style="display: flex; gap: 5px;">
+                        <button class="icon-btn" onclick="window.location.reload(true)" title="Refresh App"><i class="fa-solid fa-rotate-right"></i></button>
+                        <button class="icon-btn" onclick="ui.logout()" title="Logout"><i class="fa-solid fa-sign-out-alt"></i></button>
+                    </div>
                 </div>
 
                 <div class="sidebar-search">
