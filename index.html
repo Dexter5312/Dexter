@@ -51,16 +51,44 @@
 
         <!-- Main Dashboard View -->
         <div id="dashboard-view" class="view">
+            <!-- Vertical Navigation Rail -->
+            <nav class="nav-rail">
+                <div class="nav-rail-top">
+                    <div class="nav-logo">
+                        <img src="logo.png" alt="D" style="width:36px;height:36px;border-radius:10px;">
+                    </div>
+                    <div class="nav-divider"></div>
+                    <button class="nav-item active" id="nav-chats" onclick="ui.navTo('chats', this)" title="Chats">
+                        <i class="fa-solid fa-message"></i>
+                        <span>Chats</span>
+                    </button>
+                    <button class="nav-item" id="nav-friends" onclick="ui.navTo('friends', this)" title="Friends">
+                        <i class="fa-solid fa-user-group"></i>
+                        <span>Friends</span>
+                        <span class="nav-badge" id="nav-request-badge" style="display:none;">0</span>
+                    </button>
+                    <button class="nav-item" id="nav-profile" onclick="ui.navTo('profile', this)" title="Profile">
+                        <i class="fa-solid fa-circle-user"></i>
+                        <span>Profile</span>
+                    </button>
+                </div>
+                <div class="nav-rail-bottom">
+                    <button class="nav-item" onclick="window.location.reload(true)" title="Refresh">
+                        <i class="fa-solid fa-rotate-right"></i>
+                        <span>Refresh</span>
+                    </button>
+                    <button class="nav-item nav-logout" onclick="ui.logout()" title="Logout">
+                        <i class="fa-solid fa-right-from-bracket"></i>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            </nav>
+
             <div class="sidebar">
                 <div class="sidebar-header">
                     <div class="user-profile">
                         <div class="avatar"><i class="fa-solid fa-user"></i></div>
                         <span id="current-username">User</span>
-                    </div>
-                    <div style="display: flex; gap: 5px;">
-                        <button class="icon-btn" onclick="ui.openProfileView()" title="Profile"><i class="fa-solid fa-user-gear"></i></button>
-                        <button class="icon-btn" onclick="window.location.reload(true)" title="Refresh App"><i class="fa-solid fa-rotate-right"></i></button>
-                        <button class="icon-btn" onclick="ui.logout()" title="Logout"><i class="fa-solid fa-sign-out-alt"></i></button>
                     </div>
                 </div>
 
@@ -74,10 +102,18 @@
 
                 <div class="sidebar-filters-container">
                     <div class="sidebar-filters">
-                        <button class="filter-chip active" data-filter="all" onclick="ui.setFilter(this)">All Chats</button>
-                        <button class="filter-chip" data-filter="unread" onclick="ui.setFilter(this)">Unread Messages</button>
-                        <button class="filter-chip" data-filter="missed" onclick="ui.setFilter(this)">Missed Calls</button>
-                        <button class="filter-chip" data-filter="contacts" onclick="ui.setFilter(this)">Contacts</button>
+                        <button class="filter-chip active" data-filter="all" onclick="ui.setFilter(this)">
+                            <i class="fa-solid fa-message"></i> All Chats
+                        </button>
+                        <button class="filter-chip" data-filter="unread" onclick="ui.setFilter(this)">
+                            <i class="fa-solid fa-envelope-open-text"></i> Unread Messages
+                        </button>
+                        <button class="filter-chip" data-filter="missed" onclick="ui.setFilter(this)">
+                            <i class="fa-solid fa-phone-missed"></i> Missed Calls
+                        </button>
+                        <button class="filter-chip" data-filter="contacts" onclick="ui.setFilter(this)">
+                            <i class="fa-solid fa-address-book"></i> Contacts
+                        </button>
                     </div>
                 </div>
 

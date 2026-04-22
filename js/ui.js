@@ -124,6 +124,26 @@ const ui = {
         document.getElementById('chat-placeholder').classList.add('active');
     },
 
+    navTo(section, btn) {
+        // Update nav rail active state
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        
+        if (section === 'chats') {
+            document.getElementById('chat-placeholder').classList.add('active');
+            document.getElementById('chat-active').classList.remove('active');
+            document.getElementById('requests-view').classList.remove('active');
+            document.getElementById('profile-view').classList.remove('active');
+            if (window.innerWidth <= 768) {
+                document.querySelector('.main-chat').classList.remove('mobile-open');
+            }
+        } else if (section === 'friends') {
+            this.openFriendRequestsView();
+        } else if (section === 'profile') {
+            this.openProfileView();
+        }
+    },
+
     async initDashboard() {
         try {
             this.currentUser = await API.getCurrentUser();
@@ -140,8 +160,8 @@ const ui = {
             // Set initial profile info
             this.updateProfileUI();
             
-            // Show profile page first
-            this.openProfileView();
+            // Land on Chats view by default
+            this.navTo('chats', document.getElementById('nav-chats'));
         } catch (err) {
             console.error(err);
             this.logout();
