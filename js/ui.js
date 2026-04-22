@@ -277,8 +277,17 @@ const ui = {
         const isSent = msg.sender_id === this.currentUser.id;
         
         try {
+            // Determine which AES key to decrypt
+            let targetAesKey = msg.encrypted_aes_key;
+            if (msg.encrypted_aes_key.includes("|||")) {
+                const keys = msg.encrypted_aes_key.split("|||");
+                targetAesKey = isSent ? keys[1] : keys[0];
+            } else {
+                if (isSent) throw new Error("Old messages do not have a sender key stored");
+            }
+            
             // 1. Decrypt AES Key using our Private RSA Key
-            const aesKeyRaw = await CryptoUtil.decryptAESKeyWithRSA(msg.encrypted_aes_key, this.privateKey);
+            const aesKeyRaw = await CryptoUtil.decryptAESKeyWithRSA(targetAesKey, this.privateKey);
             const aesKey = await CryptoUtil.importAESKey(aesKeyRaw);
             
             // 2. Decrypt message content using AES Key
@@ -311,8 +320,9 @@ const ui = {
         input.value = '';
         
         try {
-            // 1. Get friend's public key
+            // 1. Get friend's public key AND our own public key
             const friendPubKey = await CryptoUtil.importPublicKey(this.activeChatUser.public_key);
+            const myPubKey = await CryptoUtil.importPublicKey(this.currentUser.public_key);
             
             // 2. Generate a new AES key for this message
             const aesKey = await CryptoUtil.generateAESKey();
@@ -320,12 +330,16 @@ const ui = {
             // 3. Encrypt message with AES key
             const encryptedContent = await CryptoUtil.encryptMessage(text, aesKey);
             
-            // 4. Encrypt AES key with friend's RSA Public Key
+            // 4. Encrypt AES key for BOTH users
             const aesKeyRaw = await CryptoUtil.exportAESKey(aesKey);
-            const encryptedAesKey = await CryptoUtil.encryptAESKeyWithRSA(aesKeyRaw, friendPubKey);
+            const friendEncryptedKey = await CryptoUtil.encryptAESKeyWithRSA(aesKeyRaw, friendPubKey);
+            const myEncryptedKey = await CryptoUtil.encryptAESKeyWithRSA(aesKeyRaw, myPubKey);
+            
+            // Combine them: friend_key|||my_key
+            const combinedAesKey = friendEncryptedKey + "|||" + myEncryptedKey;
             
             // 5. Send via WebSocket
-            API.sendWebSocketMessage(this.activeChatUser.id, encryptedContent, encryptedAesKey);
+            API.sendWebSocketMessage(this.activeChatUser.id, encryptedContent, combinedAesKey);
             
         } catch (err) {
             console.error(err);
