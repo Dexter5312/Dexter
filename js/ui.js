@@ -126,6 +126,9 @@ const ui = {
             
             // Set initial profile info
             this.updateProfileUI();
+            
+            // Show profile page first
+            this.openProfileView();
         } catch (err) {
             console.error(err);
             this.logout();
@@ -432,6 +435,17 @@ const ui = {
             document.getElementById('profile-username-sub').innerText = `@${this.currentUser.username}`;
             document.getElementById('key-status-text').innerText = this.privateKey ? 'Loaded' : 'Not Found';
             document.getElementById('key-status-text').className = `status-badge ${this.privateKey ? 'success' : 'danger'}`;
+            
+            // Device detection
+            const ua = navigator.userAgent;
+            let device = "Unknown Device";
+            if (/android/i.test(ua)) device = "Android Device";
+            else if (/iPhone|iPad|iPod/i.test(ua)) device = "iOS Device";
+            else if (/Windows/i.test(ua)) device = "Windows PC";
+            else if (/Macintosh/i.test(ua)) device = "Apple Mac";
+            else if (/Linux/i.test(ua)) device = "Linux PC";
+            
+            document.getElementById('device-info-text').innerText = `${device} (This Browser)`;
         }
     },
 
@@ -463,6 +477,7 @@ const ui = {
             this.currentUser = updatedUser;
             this.updateProfileUI();
             alert('Profile updated successfully!');
+            this.goToChats();
         } catch (err) {
             alert(err.message);
         } finally {
@@ -514,6 +529,18 @@ const ui = {
         // Remove stale empty messages on filter switch
         if (filter !== 'missed') {
             document.querySelectorAll('#friends-list .filter-empty').forEach(el => el.remove());
+        }
+    },
+
+    goToChats() {
+        document.getElementById('profile-view').classList.remove('active');
+        document.getElementById('requests-view').classList.remove('active');
+        document.getElementById('chat-active').classList.remove('active');
+        document.getElementById('chat-placeholder').classList.add('active');
+        
+        // On mobile, close the sidebar-main split
+        if (window.innerWidth <= 768) {
+            document.querySelector('.main-chat').classList.remove('mobile-open');
         }
     }
 };

@@ -227,8 +227,9 @@
                                     </div>
                                 </div>
 
-                                <div class="form-actions">
-                                    <button type="submit" class="btn primary-btn">Save Changes</button>
+                                <div class="form-actions" style="display: flex; gap: 10px;">
+                                    <button type="button" class="btn" onclick="ui.goToChats()" style="background: rgba(255,255,255,0.05); color: white; border: 1px solid var(--border);">Skip to Chats</button>
+                                    <button type="submit" class="btn primary-btn">Save & Continue</button>
                                 </div>
                             </form>
                         </div>
@@ -236,10 +237,23 @@
                         <div class="profile-card security-card">
                             <h3><i class="fa-solid fa-lock"></i> Security & Encryption</h3>
                             <p class="text-muted" style="margin-bottom: 15px;">Your messages are secured with end-to-end encryption. Your private key is stored locally on this device.</p>
-                            <div class="key-status">
+                            <div class="key-status" style="margin-bottom: 20px;">
                                 <i class="fa-solid fa-key"></i>
                                 <span>Private Key: <span id="key-status-text" class="status-badge">Loaded</span></span>
                             </div>
+                            
+                            <h3 style="margin-top: 25px;"><i class="fa-solid fa-laptop-code"></i> Device Information</h3>
+                            <div class="key-status" style="background: rgba(0,0,0,0.05);">
+                                <i class="fa-solid fa-mobile-screen-button"></i>
+                                <span id="device-info-text">Detecting device...</span>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 10px; padding: 0 5px;">
+                            <button class="btn" onclick="ui.logout()" style="background: var(--danger); color: white; border: none; padding: 16px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; border-radius: 16px; box-shadow: 0 4px 15px rgba(220, 38, 38, 0.25);">
+                                <i class="fa-solid fa-right-from-bracket"></i> Log Out from Dexter
+                            </button>
+                            <p class="text-muted" style="text-align: center; margin-top: 15px; font-size: 0.8rem;">Logging out will clear your session on this device.</p>
                         </div>
                     </div>
                 </div>
@@ -256,10 +270,10 @@
         // This tells your app to talk to your live Render server
         window.API_URL = "https://dexter-3-v8rb.onrender.com";
     </script>
-    <script src="js/crypto.js?v=5"></script>
-    <script src="js/api.js?v=5"></script>
-    <script src="js/ui.js?v=6"></script>
-    <script src="js/main.js?v=5"></script>
+    <script src="js/crypto.js?v=6"></script>
+    <script src="js/api.js?v=6"></script>
+    <script src="js/ui.js?v=7"></script>
+    <script src="js/main.js?v=6"></script>
 </body>
 
 </html>
