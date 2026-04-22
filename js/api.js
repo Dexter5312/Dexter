@@ -1,5 +1,5 @@
 const API = {
-    baseUrl: window.location.origin,
+    baseUrl: window.API_URL || "https://dexter-3-v8rb.onrender.com",
     socket: null,
     token: localStorage.getItem('access_token'),
 
@@ -24,7 +24,7 @@ const API = {
         const formData = new URLSearchParams();
         formData.append('username', username);
         formData.append('password', password);
-        
+
         const res = await fetch(`${this.baseUrl}/token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -90,19 +90,19 @@ const API = {
 
     connectWebSocket(onMessageReceived) {
         if (!this.token) return;
-        
+
         const wsUrl = `ws://${window.location.host}/ws?token=${this.token}`;
         this.socket = new WebSocket(wsUrl);
-        
+
         this.socket.onopen = () => console.log("WebSocket connected");
-        
+
         this.socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'new_message') {
                 onMessageReceived(data.message);
             }
         };
-        
+
         this.socket.onclose = () => console.log("WebSocket disconnected");
     },
 
