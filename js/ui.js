@@ -370,5 +370,10 @@ const ui = {
                 document.querySelectorAll('#friends-list .list-item').forEach(el => el.classList.remove('active-chat'));
             }, 300); // Wait for transition
         }
+    },
+    
+    toggleEmojiPicker() {
+        const container = document.getElementById('emoji-picker-container');
+        container.style.display = container.style.display === 'none' ? 'block' : 'none';
     }
 };
