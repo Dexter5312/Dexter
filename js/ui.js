@@ -75,6 +75,27 @@ const ui = {
         }
     },
 
+    async checkAuth() {
+        if (localStorage.getItem('access_token') || API.token) {
+            try {
+                this.currentUser = await API.getCurrentUser();
+                
+                // Restore private key on refresh
+                const privKeyJwk = localStorage.getItem(`privKey_${this.currentUser.username}`);
+                if (privKeyJwk) {
+                    this.privateKey = await CryptoUtil.importPrivateKey(privKeyJwk);
+                } else {
+                    console.warn("Private key not found after refresh.");
+                }
+                
+                await this.initDashboard();
+            } catch (err) {
+                console.error("Auth check failed:", err);
+                this.logout();
+            }
+        }
+    },
+
     logout() {
         API.logout();
         this.currentUser = null;
