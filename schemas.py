@@ -11,6 +11,8 @@ class UserResponse(BaseModel):
     id: int
     username: str
     public_key: str
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -46,3 +48,8 @@ class MessageResponse(BaseModel):
 
     class Config:
         from_attributes = True
+
+class UserUpdate(BaseModel):
+    username: Optional[str] = None
+    display_name: Optional[str] = None
+    bio: Optional[str] = None

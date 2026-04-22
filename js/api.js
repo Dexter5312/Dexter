@@ -100,6 +100,23 @@ const API = {
         return await res.json();
     },
 
+    async updateProfile(data) {
+        const res = await fetch(`${this.baseUrl}/users/me`, {
+            method: 'PUT',
+            headers: this.headers(),
+            body: JSON.stringify(data)
+        });
+        if (!res.ok) {
+            let detail = 'Update failed';
+            try {
+                const errJson = await res.json();
+                detail = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
+            } catch (e) {}
+            throw new Error(detail);
+        }
+        return await res.json();
+    },
+
     async getMessages(userId) {
         const res = await fetch(`${this.baseUrl}/messages/${userId}`, { headers: this.headers() });
         if (!res.ok) throw new Error('Failed to fetch messages');

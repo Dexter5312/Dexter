@@ -80,6 +80,23 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 def read_users_me(current_user: models.User = Depends(get_current_user)):
     return current_user
 
+@app.put("/users/me", response_model=schemas.UserResponse)
+def update_users_me(user_update: schemas.UserUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+    if user_update.username is not None and user_update.username != current_user.username:
+        existing_user = db.query(models.User).filter(models.User.username == user_update.username).first()
+        if existing_user:
+            raise HTTPException(status_code=400, detail="Username already taken")
+        current_user.username = user_update.username
+        
+    if user_update.display_name is not None:
+        current_user.display_name = user_update.display_name
+    if user_update.bio is not None:
+        current_user.bio = user_update.bio
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
 @app.get("/users/{username}", response_model=schemas.UserResponse)
 def get_user(username: str, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     user = db.query(models.User).filter(models.User.username == username).first()

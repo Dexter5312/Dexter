@@ -10,6 +10,8 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     password_hash = Column(String)
     public_key = Column(String) # PEM or JWK format string
+    display_name = Column(String, default="")
+    bio = Column(String, default="")
 
 class FriendRequest(Base):
     __tablename__ = "friend_requests"

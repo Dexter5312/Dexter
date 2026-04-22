@@ -8,9 +8,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>E2EE Messenger</title>
-    <link rel="stylesheet" href="css/style.css?v=8">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>E2EE Messenger — Secure Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="css/style.css?v=9">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script type="module" src="https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js"></script>
 </head>
@@ -57,6 +59,7 @@
                         <span id="current-username">User</span>
                     </div>
                     <div style="display: flex; gap: 5px;">
+                        <button class="icon-btn" onclick="ui.openProfileView()" title="Profile"><i class="fa-solid fa-user-gear"></i></button>
                         <button class="icon-btn" onclick="window.location.reload(true)" title="Refresh App"><i class="fa-solid fa-rotate-right"></i></button>
                         <button class="icon-btn" onclick="ui.logout()" title="Logout"><i class="fa-solid fa-sign-out-alt"></i></button>
                     </div>
@@ -68,6 +71,15 @@
                         <i class="fa-solid fa-user-plus"></i> Friends & Requests
                         <span id="request-count-badge" class="badge" style="margin-left:auto;">0</span>
                     </button>
+                </div>
+
+                <div class="sidebar-filters-container">
+                    <div class="sidebar-filters">
+                        <button class="filter-chip active" data-filter="all" onclick="ui.setFilter(this)">All Chats</button>
+                        <button class="filter-chip" data-filter="unread" onclick="ui.setFilter(this)">Unread Messages</button>
+                        <button class="filter-chip" data-filter="missed" onclick="ui.setFilter(this)">Missed Calls</button>
+                        <button class="filter-chip" data-filter="contacts" onclick="ui.setFilter(this)">Contacts</button>
+                    </div>
                 </div>
 
                 <div class="sidebar-sections">
@@ -164,6 +176,69 @@
                             <h3><i class="fa-solid fa-paper-plane"></i> Sent Requests</h3>
                             <div id="sent-requests-list" class="requests-grid">
                                 <!-- Sent Requests go here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="profile-view" class="profile-view">
+                    <div class="chat-header">
+                        <button class="icon-btn mobile-back-btn" onclick="ui.closeChat()" title="Back" style="display: none;">
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        <span><i class="fa-solid fa-user-gear"></i> My Profile</span>
+                    </div>
+
+                    <div class="profile-container">
+                        <div class="profile-card">
+                            <div class="profile-header">
+                                <div class="profile-avatar">
+                                    <i class="fa-solid fa-user"></i>
+                                </div>
+                                <div class="profile-title">
+                                    <h2 id="profile-display-name-heading">Your Name</h2>
+                                    <p id="profile-username-sub">@username</p>
+                                </div>
+                            </div>
+
+                            <form onsubmit="ui.handleUpdateProfile(event)" class="profile-form">
+                                <div class="form-group">
+                                    <label>Username</label>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-at"></i>
+                                        <input type="text" id="edit-username" placeholder="Username" autocomplete="off" required>
+                                    </div>
+                                    <p class="input-hint">Changing your username will affect how others find you.</p>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Display Name</label>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-id-card"></i>
+                                        <input type="text" id="edit-display-name" placeholder="Display Name" autocomplete="off">
+                                    </div>
+                                </div>
+
+                                <div class="form-group">
+                                    <label>Bio</label>
+                                    <div class="search-input-wrapper">
+                                        <i class="fa-solid fa-quote-left"></i>
+                                        <textarea id="edit-bio" placeholder="Tell us about yourself..." rows="3" style="width: 100%; background: rgba(0, 0, 0, 0.4); border: 1px solid var(--border); border-radius: 12px; color: white; padding: 12px 12px 12px 40px; outline: none; font-family: inherit; resize: none;"></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="form-actions">
+                                    <button type="submit" class="btn primary-btn">Save Changes</button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="profile-card security-card">
+                            <h3><i class="fa-solid fa-lock"></i> Security & Encryption</h3>
+                            <p class="text-muted" style="margin-bottom: 15px;">Your messages are secured with end-to-end encryption. Your private key is stored locally on this device.</p>
+                            <div class="key-status">
+                                <i class="fa-solid fa-key"></i>
+                                <span>Private Key: <span id="key-status-text" class="status-badge">Loaded</span></span>
                             </div>
                         </div>
                     </div>

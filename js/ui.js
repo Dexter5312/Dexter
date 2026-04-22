@@ -106,6 +106,8 @@ const ui = {
         document.getElementById('chat-active').classList.remove('active');
         const requestsView = document.getElementById('requests-view');
         if (requestsView) requestsView.classList.remove('active');
+        const profileView = document.getElementById('profile-view');
+        if (profileView) profileView.classList.remove('active');
         document.getElementById('chat-placeholder').classList.add('active');
     },
 
@@ -121,6 +123,9 @@ const ui = {
             
             // Load requests and friends
             await this.loadFriendRequests();
+            
+            // Set initial profile info
+            this.updateProfileUI();
         } catch (err) {
             console.error(err);
             this.logout();
@@ -386,15 +391,129 @@ const ui = {
             setTimeout(() => {
                 document.getElementById('chat-active').classList.remove('active');
                 document.getElementById('requests-view').classList.remove('active');
+                document.getElementById('profile-view').classList.remove('active');
                 document.getElementById('chat-placeholder').classList.add('active');
                 this.activeChatUser = null;
                 document.querySelectorAll('#friends-list .list-item').forEach(el => el.classList.remove('active-chat'));
             }, 300); // Wait for transition
         }
     },
+
+    openProfileView() {
+        document.getElementById('chat-placeholder').classList.remove('active');
+        document.getElementById('chat-active').classList.remove('active');
+        document.getElementById('requests-view').classList.remove('active');
+        document.getElementById('profile-view').classList.add('active');
+        
+        document.querySelectorAll('#friends-list .list-item').forEach(el => el.classList.remove('active-chat'));
+        this.activeChatUser = null;
+
+        // Fill form with current data
+        document.getElementById('edit-username').value = this.currentUser.username;
+        document.getElementById('edit-display-name').value = this.currentUser.display_name || '';
+        document.getElementById('edit-bio').value = this.currentUser.bio || '';
+        
+        this.updateProfileUI();
+        
+        // Mobile slide-in
+        if (window.innerWidth <= 768) {
+            document.querySelector('.main-chat').classList.add('mobile-open');
+        }
+    },
+
+    updateProfileUI() {
+        if (!this.currentUser) return;
+        
+        const displayName = this.currentUser.display_name || this.currentUser.username;
+        document.getElementById('current-username').innerText = displayName;
+        
+        if (document.getElementById('profile-display-name-heading')) {
+            document.getElementById('profile-display-name-heading').innerText = displayName;
+            document.getElementById('profile-username-sub').innerText = `@${this.currentUser.username}`;
+            document.getElementById('key-status-text').innerText = this.privateKey ? 'Loaded' : 'Not Found';
+            document.getElementById('key-status-text').className = `status-badge ${this.privateKey ? 'success' : 'danger'}`;
+        }
+    },
+
+    async handleUpdateProfile(e) {
+        e.preventDefault();
+        const username = document.getElementById('edit-username').value.trim();
+        const displayName = document.getElementById('edit-display-name').value.trim();
+        const bio = document.getElementById('edit-bio').value.trim();
+        
+        if (!username) return;
+        
+        try {
+            this.showLoading('Updating profile...');
+            const updatedUser = await API.updateProfile({
+                username: username,
+                display_name: displayName,
+                bio: bio
+            });
+            
+            // If username changed, we might need to update local storage key for private key
+            if (username !== this.currentUser.username) {
+                const privKey = localStorage.getItem(`privKey_${this.currentUser.username}`);
+                if (privKey) {
+                    localStorage.setItem(`privKey_${username}`, privKey);
+                    localStorage.removeItem(`privKey_${this.currentUser.username}`);
+                }
+            }
+            
+            this.currentUser = updatedUser;
+            this.updateProfileUI();
+            alert('Profile updated successfully!');
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            this.hideLoading();
+        }
+    },
     
     toggleEmojiPicker() {
         const container = document.getElementById('emoji-picker-container');
         container.style.display = container.style.display === 'none' ? 'block' : 'none';
+    },
+
+    setFilter(chipEl) {
+        // Toggle active class on chips
+        document.querySelectorAll('.filter-chip').forEach(btn => btn.classList.remove('active'));
+        chipEl.classList.add('active');
+
+        const filter = chipEl.dataset.filter;
+        const friendsSection = document.querySelector('.sidebar-sections .section-title');
+        const items = document.querySelectorAll('#friends-list .list-item');
+
+        if (filter === 'all') {
+            if (friendsSection) friendsSection.textContent = 'Chats';
+            items.forEach(item => item.style.display = '');
+        } else if (filter === 'unread') {
+            if (friendsSection) friendsSection.textContent = 'Unread Messages';
+            // Show items with an unread badge, hide others
+            items.forEach(item => {
+                const badge = item.querySelector('.unread-badge');
+                item.style.display = badge ? '' : 'none';
+            });
+        } else if (filter === 'missed') {
+            if (friendsSection) friendsSection.textContent = 'Missed Calls';
+            // Placeholder: hide all since calls aren't implemented yet
+            items.forEach(item => item.style.display = 'none');
+            const container = document.getElementById('friends-list');
+            if (!container.querySelector('.filter-empty')) {
+                const msg = document.createElement('p');
+                msg.className = 'filter-empty text-muted';
+                msg.style.cssText = 'text-align:center; padding:20px; font-style:italic; font-size:0.85rem;';
+                msg.textContent = 'No missed calls';
+                container.appendChild(msg);
+            }
+        } else if (filter === 'contacts') {
+            if (friendsSection) friendsSection.textContent = 'Contacts';
+            items.forEach(item => item.style.display = '');
+        }
+
+        // Remove stale empty messages on filter switch
+        if (filter !== 'missed') {
+            document.querySelectorAll('#friends-list .filter-empty').forEach(el => el.remove());
+        }
     }
 };
