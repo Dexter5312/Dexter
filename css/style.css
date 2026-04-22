@@ -376,3 +376,107 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);heigh
     display:flex;align-items:center;gap:8px;white-space:nowrap;
 }
 #dexter-toast.toast-visible{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── CALL LOGS (SIDEBAR) ── */
+.call-log-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+.call-log-item:hover {
+    background: rgba(244, 63, 94, 0.04);
+}
+.call-log-info {
+    flex: 1;
+    min-width: 0;
+}
+.call-log-name {
+    font-weight: 700;
+    font-size: 0.92rem;
+    color: var(--text);
+    display: block;
+}
+.call-log-type {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+.call-type-missed {
+    color: var(--danger);
+    font-size: 0.85rem;
+}
+.call-log-meta {
+    text-align: right;
+    flex-shrink: 0;
+}
+.call-log-time {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+.call-back-icon {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--primary-glow);
+    color: var(--primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.85rem;
+    opacity: 0;
+    transform: translateX(10px);
+    transition: all 0.2s;
+}
+.call-log-item:hover .call-back-icon {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* ── MISSED CALL SYSTEM MESSAGE (CHAT) ── */
+.system-msg-row {
+    display: flex;
+    justify-content: center;
+    width: 100%;
+    margin: 12px 0;
+    animation: fadeUp 0.3s ease;
+}
+.missed-call-bubble {
+    background: rgba(244, 63, 94, 0.05);
+    border: 1px solid rgba(244, 63, 94, 0.15);
+    padding: 8px 18px;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    box-shadow: 0 2px 8px rgba(244, 63, 94, 0.05);
+}
+.missed-call-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--danger);
+    font-weight: 600;
+    font-size: 0.82rem;
+}
+.call-back-link {
+    font-size: 0.72rem;
+    color: var(--primary);
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: opacity 0.2s;
+}
+.call-back-link:hover {
+    opacity: 0.8;
+    text-decoration: underline;
+}

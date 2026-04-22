@@ -440,6 +440,24 @@ const ui = {
             const plaintext = await CryptoUtil.decryptMessage(msg.encrypted_content, aesKey);
             const timeStr = new Date(msg.timestamp + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+            // ── CHECK FOR MISSED CALL SYSTEM MESSAGE ──
+            if (plaintext.startsWith('[MISSED_CALL]')) {
+                const timeOnly = plaintext.split(']')[1] || timeStr;
+                const row = document.createElement('div');
+                row.className = 'system-msg-row';
+                row.innerHTML = `
+                    <div class="missed-call-bubble">
+                        <div class="missed-call-content">
+                            <i class="fa-solid fa-phone-slash"></i>
+                            <span>Missed Call at ${timeOnly}</span>
+                        </div>
+                        <a class="call-back-link" onclick="Call.startCall(${this.activeChatUser.id}, '${this.activeChatUser.username}', 'audio')">Tap to call back</a>
+                    </div>
+                `;
+                container.appendChild(row);
+                return;
+            }
+
             // Wrapper row (positions bubble left/right + timestamp outside bubble)
             const row = document.createElement('div');
             row.className = `msg-row ${isSent ? 'sent' : 'received'}`;
@@ -611,13 +629,53 @@ const ui = {
         document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
         chipEl.classList.add('active');
         const filter = chipEl.dataset.filter;
-        const items = document.querySelectorAll('#friends-list .chat-item');
-        items.forEach(item => item.style.display = '');
-        if (filter === 'unread') {
-            items.forEach(item => {
+        const listEl = document.getElementById('friends-list');
+        const items = document.querySelectorAll('#friends-list .chat-item, #friends-list .call-log-item');
+        
+        // Hide all current items
+        items.forEach(item => item.style.display = 'none');
+
+        if (filter === 'all' || filter === 'contacts') {
+            document.querySelectorAll('#friends-list .chat-item').forEach(item => item.style.display = 'flex');
+        } else if (filter === 'unread') {
+            document.querySelectorAll('#friends-list .chat-item').forEach(item => {
                 const badge = item.querySelector('.unread-badge');
-                item.style.display = badge ? '' : 'none';
+                if (badge) item.style.display = 'flex';
             });
+        } else if (filter === 'missed') {
+            // Render 3 placeholder call logs as requested
+            listEl.innerHTML = ''; // Clear for missed view
+            const placeholders = [
+                { name: 'Bob Johnson', type: 'Voice Call', time: 'Yesterday, 8:30 PM', avatar: 'B' },
+                { name: 'Alice Smith', type: 'Video Call', time: 'Today, 10:42 AM', avatar: 'A' },
+                { name: 'Charlie Brown', type: 'Voice Call', time: '2 days ago', avatar: 'C' }
+            ];
+            placeholders.forEach(call => {
+                const div = document.createElement('div');
+                div.className = 'call-log-item';
+                div.innerHTML = `
+                    <div class="chat-item-avatar">${call.avatar}</div>
+                    <div class="call-log-info">
+                        <span class="call-log-name">${call.name}</span>
+                        <div class="call-log-type">
+                            <i class="fa-solid fa-phone-slash call-type-missed"></i>
+                            <span>Missed ${call.type}</span>
+                        </div>
+                    </div>
+                    <div class="call-log-meta">
+                        <span class="call-log-time">${call.time}</span>
+                        <div class="call-back-icon" title="Call Back">
+                            <i class="fa-solid fa-phone"></i>
+                        </div>
+                    </div>
+                `;
+                listEl.appendChild(div);
+            });
+        }
+        
+        // If switching back from missed, we need to reload real friends
+        if (filter !== 'missed') {
+            this.loadFriendRequests();
         }
     },
 
