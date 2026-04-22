@@ -113,10 +113,11 @@ const CryptoUtil = {
     },
 
     // Encrypt message with AES-GCM
-    // Returns { ciphertextBase64, ivBase64 } combined as "iv:ciphertext"
+    // Format: JSON {iv, ct} — safe for all Unicode including emoji
     async encryptMessage(messageStr, aesKey) {
         const iv = window.crypto.getRandomValues(new Uint8Array(12));
-        const encoded = this.strToBuffer(messageStr);
+        // TextEncoder always uses UTF-8, correctly handles emoji (4-byte sequences)
+        const encoded = new TextEncoder().encode(messageStr);
         
         const ciphertextBuffer = await window.crypto.subtle.encrypt(
             { name: "AES-GCM", iv: iv },
@@ -124,18 +125,38 @@ const CryptoUtil = {
             encoded
         );
         
-        const ivB64 = this.bufferToBase64(iv);
-        const cipherB64 = this.bufferToBase64(ciphertextBuffer);
-        return `${ivB64}:${cipherB64}`;
+        // Store as JSON — avoids any separator collision issues
+        return JSON.stringify({
+            iv: this.bufferToBase64(iv),
+            ct: this.bufferToBase64(ciphertextBuffer)
+        });
     },
 
     // Decrypt message with AES-GCM
+    // Supports new JSON format AND old "iv:ciphertext" format (backward compat)
     async decryptMessage(encryptedPayload, aesKey) {
-        const parts = encryptedPayload.split(':');
-        if (parts.length !== 2) throw new Error("Invalid encrypted payload format");
-        
-        const iv = this.base64ToBuffer(parts[0]);
-        const ciphertext = this.base64ToBuffer(parts[1]);
+        let ivB64, ctB64;
+
+        if (encryptedPayload.startsWith('{')) {
+            // New JSON format: {"iv":"...","ct":"..."}
+            try {
+                const parsed = JSON.parse(encryptedPayload);
+                ivB64 = parsed.iv;
+                ctB64 = parsed.ct;
+            } catch {
+                throw new Error('Invalid JSON encrypted payload');
+            }
+        } else {
+            // Legacy format: "ivBase64:ciphertextBase64"
+            // Use indexOf to split ONLY on first colon (safe even if ct has colons)
+            const colonIdx = encryptedPayload.indexOf(':');
+            if (colonIdx === -1) throw new Error('Invalid encrypted payload: no separator found');
+            ivB64 = encryptedPayload.slice(0, colonIdx);
+            ctB64 = encryptedPayload.slice(colonIdx + 1);
+        }
+
+        const iv = this.base64ToBuffer(ivB64);
+        const ciphertext = this.base64ToBuffer(ctB64);
         
         const decryptedBuffer = await window.crypto.subtle.decrypt(
             { name: "AES-GCM", iv: new Uint8Array(iv) },
@@ -143,7 +164,8 @@ const CryptoUtil = {
             ciphertext
         );
         
-        return this.bufferToStr(decryptedBuffer);
+        // TextDecoder always uses UTF-8, correctly restores emoji
+        return new TextDecoder().decode(decryptedBuffer);
     },
 
     // Encrypt AES key buffer with RSA Public Key
