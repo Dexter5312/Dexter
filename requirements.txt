@@ -6,3 +6,4 @@ passlib[bcrypt]
 sqlalchemy
 pydantic
 pydantic-settings
+PyJWT
