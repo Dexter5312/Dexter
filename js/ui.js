@@ -2,113 +2,99 @@ const ui = {
     authMode: 'login',
     currentUser: null,
     activeChatUser: null,
-    privateKey: null, // CryptoKey object
-    friends: {}, // map of id -> User object
+    privateKey: null,
+    friends: {},
 
+    // ── LOADING ──
     showLoading(text = 'Loading...') {
-        document.getElementById('loading-text').innerText = text;
-        document.getElementById('loading-overlay').classList.add('active');
+        const el = document.getElementById('loading-overlay');
+        const txt = document.getElementById('loading-text');
+        if (txt) txt.innerText = text;
+        if (el) { el.classList.add('active'); el.style.display = 'flex'; }
     },
-
     hideLoading() {
-        document.getElementById('loading-overlay').classList.remove('active');
+        const el = document.getElementById('loading-overlay');
+        if (el) { el.classList.remove('active'); el.style.display = ''; }
     },
 
+    // ── VIEW SWITCHING ──
     switchView(viewId) {
-        // Force hide everything
         document.querySelectorAll('.view').forEach(v => {
             v.style.display = 'none';
             v.classList.remove('active');
         });
-        
-        // Show only the target
         const target = document.getElementById(viewId);
-        if (target) {
-            target.style.display = 'flex';
-            target.classList.add('active');
-        }
-        
-        // Reset scroll
+        if (target) { target.style.display = 'flex'; target.classList.add('active'); }
         window.scrollTo(0, 0);
     },
 
+    // ── AUTH ──
     switchAuthTab(mode) {
         this.authMode = mode;
-        const btns = document.querySelectorAll('.tab-btn');
-        btns[0].classList.toggle('active', mode === 'login');
-        btns[1].classList.toggle('active', mode === 'register');
-        document.getElementById('auth-submit-btn').innerText = mode === 'login' ? 'Login' : 'Register';
-        document.getElementById('auth-error').innerText = '';
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        const btn = document.getElementById(mode === 'login' ? 'tab-login' : 'tab-register');
+        if (btn) btn.classList.add('active');
+        const submitBtn = document.getElementById('auth-submit-btn');
+        if (submitBtn) {
+            submitBtn.innerHTML = mode === 'login'
+                ? '<i class="fa-solid fa-right-to-bracket"></i> Sign In'
+                : '<i class="fa-solid fa-user-plus"></i> Create Account';
+        }
+        const errEl = document.getElementById('auth-error');
+        if (errEl) errEl.innerText = '';
+    },
+
+    togglePasswordVisibility() {
+        const input = document.getElementById('password');
+        const icon = document.getElementById('pw-eye-icon');
+        if (!input) return;
+        if (input.type === 'password') {
+            input.type = 'text';
+            if (icon) icon.className = 'fa-solid fa-eye-slash';
+        } else {
+            input.type = 'password';
+            if (icon) icon.className = 'fa-solid fa-eye';
+        }
     },
 
     async handleAuth(e) {
         e.preventDefault();
-        const username = document.getElementById('username').value;
+        const username = document.getElementById('username').value.trim();
         const password = document.getElementById('password').value;
         const errorEl = document.getElementById('auth-error');
-        errorEl.innerText = '';
-        
-        this.showLoading();
+        if (errorEl) errorEl.innerText = '';
+        if (!username || !password) return;
+
+        this.showLoading(this.authMode === 'login' ? 'Signing in...' : 'Creating account...');
         try {
             if (this.authMode === 'register') {
-                // Generate Key Pair
                 const keyPair = await CryptoUtil.generateRSAKeyPair();
                 const pubKeyJwk = await CryptoUtil.exportPublicKey(keyPair.publicKey);
                 const privKeyJwk = await CryptoUtil.exportPrivateKey(keyPair.privateKey);
-                
-                // Register
                 await API.register(username, password, pubKeyJwk);
-                
-                // Save private key locally
                 localStorage.setItem(`privKey_${username}`, privKeyJwk);
-                
-                // Auto login
                 await API.login(username, password);
                 this.privateKey = keyPair.privateKey;
             } else {
-                // Login
                 await API.login(username, password);
-                
-                // Load private key
                 const privKeyJwk = localStorage.getItem(`privKey_${username}`);
                 if (privKeyJwk) {
                     this.privateKey = await CryptoUtil.importPrivateKey(privKeyJwk);
                 } else {
-                    console.warn("Private key not found on this device.");
-                    alert("Warning: Your encryption keys were not found on this device. You will not be able to decrypt past messages.");
+                    console.warn('Private key not found on this device.');
                     this.privateKey = null;
                 }
             }
-            
             await this.initDashboard();
         } catch (err) {
-            errorEl.innerText = err.message;
+            console.error(err);
+            if (errorEl) errorEl.innerText = err.message || 'Authentication failed';
         } finally {
             this.hideLoading();
         }
     },
 
-    async checkAuth() {
-        if (localStorage.getItem('access_token') || API.token) {
-            try {
-                this.currentUser = await API.getCurrentUser();
-                
-                // Restore private key on refresh
-                const privKeyJwk = localStorage.getItem(`privKey_${this.currentUser.username}`);
-                if (privKeyJwk) {
-                    this.privateKey = await CryptoUtil.importPrivateKey(privKeyJwk);
-                } else {
-                    console.warn("Private key not found after refresh.");
-                }
-                
-                await this.initDashboard();
-            } catch (err) {
-                console.error("Auth check failed:", err);
-                this.logout();
-            }
-        }
-    },
-
+    // ── LOGOUT ──
     logout() {
         API.logout();
         this.currentUser = null;
@@ -116,27 +102,37 @@ const ui = {
         this.privateKey = null;
         this.friends = {};
         this.switchView('auth-view');
-        document.getElementById('chat-active').classList.remove('active');
-        const requestsView = document.getElementById('requests-view');
-        if (requestsView) requestsView.classList.remove('active');
-        const profileView = document.getElementById('profile-view');
-        if (profileView) profileView.classList.remove('active');
-        document.getElementById('chat-placeholder').classList.add('active');
+        this._resetChatArea();
     },
 
+    _resetChatArea() {
+        const placeholder = document.getElementById('chat-placeholder');
+        const chatActive = document.getElementById('chat-active');
+        const reqView = document.getElementById('requests-view');
+        const profileView = document.getElementById('profile-view');
+        if (placeholder) placeholder.classList.add('active'), placeholder.style.display = '';
+        if (chatActive) chatActive.classList.remove('active');
+        if (reqView) reqView.classList.remove('active');
+        if (profileView) profileView.classList.remove('active');
+    },
+
+    // ── NAV RAIL ──
     navTo(section, btn) {
-        // Update nav rail active state
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
         if (btn) btn.classList.add('active');
-        
+
+        const placeholder = document.getElementById('chat-placeholder');
+        const chatActive = document.getElementById('chat-active');
+        const reqView = document.getElementById('requests-view');
+        const profileView = document.getElementById('profile-view');
+
+        [placeholder, chatActive, reqView, profileView].forEach(el => {
+            if (el) { el.classList.remove('active'); el.style.display = ''; }
+        });
+
         if (section === 'chats') {
-            document.getElementById('chat-placeholder').classList.add('active');
-            document.getElementById('chat-active').classList.remove('active');
-            document.getElementById('requests-view').classList.remove('active');
-            document.getElementById('profile-view').classList.remove('active');
-            if (window.innerWidth <= 768) {
-                document.querySelector('.main-chat').classList.remove('mobile-open');
-            }
+            if (placeholder) { placeholder.classList.add('active'); }
+            if (window.innerWidth <= 768) document.querySelector('.main-content')?.classList.remove('mobile-open');
         } else if (section === 'friends') {
             this.openFriendRequestsView();
         } else if (section === 'profile') {
@@ -144,23 +140,16 @@ const ui = {
         }
     },
 
+    // ── DASHBOARD INIT ──
     async initDashboard() {
         try {
             this.currentUser = await API.getCurrentUser();
-            document.getElementById('current-username').innerText = this.currentUser.username;
-            
+            this._updateSidebarUser();
             this.switchView('dashboard-view');
-            
-            // Connect WebSocket
+            this._initEmojiPicker();
             API.connectWebSocket(this.handleNewMessage.bind(this));
-            
-            // Load requests and friends
             await this.loadFriendRequests();
-            
-            // Set initial profile info
             this.updateProfileUI();
-            
-            // Land on Chats view by default
             this.navTo('chats', document.getElementById('nav-chats'));
         } catch (err) {
             console.error(err);
@@ -168,124 +157,182 @@ const ui = {
         }
     },
 
-    async loadFriendRequests() {
-        const requests = await API.getFriendRequests();
-        const pendingList = document.getElementById('requests-list-page');
-        const sentList = document.getElementById('sent-requests-list');
-        const friendsEl = document.getElementById('friends-list');
-        
-        if (pendingList) pendingList.innerHTML = '';
-        if (sentList) sentList.innerHTML = '';
-        if (friendsEl) friendsEl.innerHTML = '';
-        
-        let pendingCount = 0;
-        let sentCount = 0;
-        this.friends = {};
+    _updateSidebarUser() {
+        if (!this.currentUser) return;
+        const name = this.currentUser.display_name || this.currentUser.username;
+        const nameEl = document.getElementById('current-username');
+        if (nameEl) nameEl.innerText = name;
+        const avatarEl = document.getElementById('sidebar-avatar');
+        if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+        const bigAvatar = document.getElementById('profile-big-avatar');
+        if (bigAvatar) bigAvatar.textContent = name.charAt(0).toUpperCase();
+    },
 
-        for (const req of requests) {
-            if (req.status === 'pending') {
-                if (req.receiver.id === this.currentUser.id) {
-                    pendingCount++;
-                    if (pendingList) {
-                        pendingList.innerHTML += `
-                            <div class="request-item card">
-                                <div class="req-user-info">
-                                    <div class="avatar"><i class="fa-solid fa-user"></i></div>
-                                    <div class="req-details">
-                                        <span class="req-name">${req.sender.username}</span>
-                                        <span class="req-sub">Wants to connect</span>
-                                    </div>
-                                </div>
-                                <div class="req-actions">
-                                    <button class="action-btn accept" onclick="ui.acceptRequest(${req.id})" style="background: rgba(0, 255, 102, 0.1); border-color: var(--neon-green); color: var(--neon-green); padding: 8px 16px;">
-                                        <i class="fa-solid fa-check"></i> Accept
-                                    </button>
-                                </div>
-                            </div>
-                        `;
+    // ── EMOJI PICKER (WORKING) ──
+    _initEmojiPicker() {
+        const pickerEl = document.getElementById('emoji-picker-el');
+        if (!pickerEl) return;
+        if (pickerEl._dexterInitialized) return;
+        pickerEl._dexterInitialized = true;
+
+        pickerEl.addEventListener('emoji-click', (event) => {
+            const emoji = event.detail.unicode;
+            const input = document.getElementById('message-input');
+            if (!input || !emoji) return;
+            const start = input.selectionStart;
+            const end = input.selectionEnd;
+            const before = input.value.slice(0, start);
+            const after = input.value.slice(end);
+            input.value = before + emoji + after;
+            const newPos = start + emoji.length;
+            input.setSelectionRange(newPos, newPos);
+            input.focus();
+            // Close picker after selection
+            this.closeEmojiPicker();
+        });
+
+        // Close picker when clicking outside
+        document.addEventListener('click', (e) => {
+            const wrap = document.getElementById('emoji-picker-wrap');
+            const trigger = document.getElementById('emoji-trigger-btn');
+            if (wrap && !wrap.contains(e.target) && e.target !== trigger && !trigger?.contains(e.target)) {
+                this.closeEmojiPicker();
+            }
+        }, true);
+    },
+
+    toggleEmojiPicker() {
+        const wrap = document.getElementById('emoji-picker-wrap');
+        const trigger = document.getElementById('emoji-trigger-btn');
+        if (!wrap) return;
+        const isOpen = wrap.classList.contains('open');
+        if (isOpen) {
+            this.closeEmojiPicker();
+        } else {
+            wrap.classList.add('open');
+            wrap.style.display = 'block';
+            if (trigger) trigger.classList.add('open');
+        }
+    },
+
+    closeEmojiPicker() {
+        const wrap = document.getElementById('emoji-picker-wrap');
+        const trigger = document.getElementById('emoji-trigger-btn');
+        if (wrap) { wrap.classList.remove('open'); wrap.style.display = 'none'; }
+        if (trigger) trigger.classList.remove('open');
+    },
+
+    // ── FRIENDS ──
+    async loadFriendRequests() {
+        try {
+            const requests = await API.getFriendRequests();
+            const pendingList = document.getElementById('requests-list-page');
+            const sentList = document.getElementById('sent-requests-list');
+            const friendsEl = document.getElementById('friends-list');
+
+            if (pendingList) pendingList.innerHTML = '';
+            if (sentList) sentList.innerHTML = '';
+            if (friendsEl) friendsEl.innerHTML = '';
+
+            this.friends = {};
+            let pendingCount = 0;
+
+            for (const req of requests) {
+                if (req.status === 'pending') {
+                    const isReceiver = req.receiver_id === this.currentUser.id;
+                    if (isReceiver) {
+                        pendingCount++;
+                        this._renderPendingRequest(req, pendingList);
+                    } else {
+                        this._renderSentRequest(req, sentList);
                     }
-                } else if (req.sender.id === this.currentUser.id) {
-                    sentCount++;
-                    if (sentList) {
-                        sentList.innerHTML += `
-                            <div class="request-item card">
-                                <div class="req-user-info">
-                                    <div class="avatar"><i class="fa-solid fa-user"></i></div>
-                                    <div class="req-details">
-                                        <span class="req-name">${req.receiver.username}</span>
-                                        <span class="req-sub" style="color: var(--text-muted);"><i class="fa-regular fa-clock"></i> Waiting for response</span>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    }
-                }
-            } else if (req.status === 'accepted') {
-                const friend = req.sender.id === this.currentUser.id ? req.receiver : req.sender;
-                this.friends[friend.id] = friend;
-                
-                if (friendsEl) {
-                    friendsEl.innerHTML += `
-                        <div class="list-item" id="friend-item-${friend.id}" onclick="ui.openChat(${friend.id})">
-                            <div class="item-info">
-                                <div class="avatar"><i class="fa-solid fa-user"></i></div>
-                                <span class="item-name">${friend.username}</span>
-                            </div>
-                        </div>
-                    `;
+                } else if (req.status === 'accepted') {
+                    const friendId = req.sender_id === this.currentUser.id ? req.receiver_id : req.sender_id;
+                    const friendUsername = req.sender_id === this.currentUser.id ? req.receiver_username : req.sender_username;
+                    const friendPublicKey = req.sender_id === this.currentUser.id ? req.receiver_public_key : req.sender_public_key;
+                    this.friends[friendId] = { id: friendId, username: friendUsername, public_key: friendPublicKey };
+                    this._renderFriendItem({ id: friendId, username: friendUsername, public_key: friendPublicKey }, friendsEl);
                 }
             }
-        }
-        
-        const countEls = document.querySelectorAll('#request-count');
-        countEls.forEach(el => el.innerText = pendingCount);
-        const badgeEl = document.getElementById('request-count-badge');
-        if (badgeEl) badgeEl.innerText = pendingCount;
-        
-        if (pendingList && pendingCount === 0) {
-            pendingList.innerHTML = `<p class="text-muted" style="text-align:center; padding: 20px; font-style: italic;">No pending requests</p>`;
-        }
-        if (sentList && sentCount === 0) {
-            sentList.innerHTML = `<p class="text-muted" style="text-align:center; padding: 20px; font-style: italic;">No sent requests</p>`;
-        }
-    },
 
-    openFriendRequestsView() {
-        document.getElementById('chat-placeholder').classList.remove('active');
-        document.getElementById('chat-active').classList.remove('active');
-        document.getElementById('requests-view').classList.add('active');
-        
-        document.querySelectorAll('#friends-list .list-item').forEach(el => el.classList.remove('active-chat'));
-        this.activeChatUser = null;
-        
-        // Mobile slide-in
-        if (window.innerWidth <= 768) {
-            document.querySelector('.main-chat').classList.add('mobile-open');
-        }
-    },
+            // Badge
+            const pip = document.getElementById('nav-pip');
+            const badge = document.getElementById('request-count-badge');
+            const countEl = document.getElementById('request-count');
+            if (pip) pip.style.display = pendingCount > 0 ? 'block' : 'none';
+            if (badge) { badge.style.display = pendingCount > 0 ? 'block' : 'none'; badge.textContent = pendingCount; }
+            if (countEl) countEl.textContent = pendingCount;
 
-    async handleSearchUser(e) {
-        e.preventDefault();
-        const username = document.getElementById('search-username').value;
-        if (!username) return;
-        
-        try {
-            this.showLoading();
-            const user = await API.searchUser(username);
-            await API.sendFriendRequest(user.username);
-            alert(`Friend request sent to ${username}!`);
-            document.getElementById('search-username').value = '';
-            await this.loadFriendRequests();
+            if (friendsEl && Object.keys(this.friends).length === 0 && !friendsEl.querySelector('.empty-chat-list')) {
+                friendsEl.innerHTML = '<div class="empty-chat-list"><i class="fa-regular fa-comment-dots"></i><p>No conversations yet</p><small>Add friends to start chatting</small></div>';
+            }
         } catch (err) {
-            alert(err.message);
-        } finally {
-            this.hideLoading();
+            console.error('Failed to load friend requests:', err);
         }
+    },
+
+    _renderFriendItem(friend, container) {
+        if (!container) return;
+        const initial = (friend.username || '?').charAt(0).toUpperCase();
+        const div = document.createElement('div');
+        div.className = 'chat-item';
+        div.dataset.friendId = friend.id;
+        div.innerHTML = `
+            <div class="chat-item-avatar">${initial}</div>
+            <div class="chat-item-info">
+                <span class="chat-item-name">${friend.username}</span>
+                <span class="chat-item-preview">Click to open chat</span>
+            </div>
+        `;
+        div.onclick = () => this.openChat(friend);
+        container.appendChild(div);
+        // Remove empty state if present
+        const empty = container.querySelector('.empty-chat-list');
+        if (empty) empty.remove();
+    },
+
+    _renderPendingRequest(req, container) {
+        if (!container) return;
+        const username = req.sender_username || `User #${req.sender_id}`;
+        const initial = username.charAt(0).toUpperCase();
+        const div = document.createElement('div');
+        div.className = 'req-item';
+        div.innerHTML = `
+            <div class="req-user">
+                <div class="req-avatar">${initial}</div>
+                <div class="req-meta">
+                    <span class="req-name">${username}</span>
+                    <span class="req-sub">Wants to connect</span>
+                </div>
+            </div>
+            <div class="req-actions">
+                <button class="accept-btn" onclick="ui.acceptRequest(${req.id})">Accept</button>
+            </div>
+        `;
+        container.appendChild(div);
+    },
+
+    _renderSentRequest(req, container) {
+        if (!container) return;
+        const username = req.receiver_username || `User #${req.receiver_id}`;
+        const initial = username.charAt(0).toUpperCase();
+        const div = document.createElement('div');
+        div.className = 'req-item';
+        div.innerHTML = `
+            <div class="req-user">
+                <div class="req-avatar">${initial}</div>
+                <div class="req-meta">
+                    <span class="req-name">${username}</span>
+                    <span class="req-sub">Request sent — pending</span>
+                </div>
+            </div>
+        `;
+        container.appendChild(div);
     },
 
     async acceptRequest(reqId) {
         try {
-            this.showLoading();
+            this.showLoading('Accepting...');
             await API.acceptFriendRequest(reqId);
             await this.loadFriendRequests();
         } catch (err) {
@@ -295,210 +342,210 @@ const ui = {
         }
     },
 
-    async openChat(friendId) {
-        this.activeChatUser = this.friends[friendId];
-        
-        // Update UI styling
-        document.querySelectorAll('#friends-list .list-item').forEach(el => el.classList.remove('active-chat'));
-        document.getElementById(`friend-item-${friendId}`).classList.add('active-chat');
-        
-        document.getElementById('chat-placeholder').classList.remove('active');
-        document.getElementById('requests-view').classList.remove('active');
-        document.getElementById('chat-active').classList.add('active');
-        document.getElementById('active-chat-username').innerText = this.activeChatUser.username;
-        
-        // Mobile slide-in
-        if (window.innerWidth <= 768) {
-            document.querySelector('.main-chat').classList.add('mobile-open');
+    async handleSearchUser(e) {
+        e.preventDefault();
+        const input = document.getElementById('search-username');
+        const username = input?.value.trim();
+        if (!username) return;
+        try {
+            this.showLoading('Searching...');
+            await API.sendFriendRequest(username);
+            alert(`Friend request sent to @${username}!`);
+            if (input) input.value = '';
+            await this.loadFriendRequests();
+        } catch (err) {
+            alert(err.message || 'Failed to send request');
+        } finally {
+            this.hideLoading();
         }
-        
-        // Load messages
+    },
+
+    // ── CHAT ──
+    async openChat(friend) {
+        this.activeChatUser = friend;
+
+        // Update header
+        const nameEl = document.getElementById('active-chat-username');
+        const avatarEl = document.getElementById('chat-peer-avatar');
+        if (nameEl) nameEl.textContent = friend.username;
+        if (avatarEl) avatarEl.textContent = friend.username.charAt(0).toUpperCase();
+
+        // Hide other panels, show chat
+        const placeholder = document.getElementById('chat-placeholder');
+        const chatActive = document.getElementById('chat-active');
+        const reqView = document.getElementById('requests-view');
+        const profileView = document.getElementById('profile-view');
+        if (placeholder) { placeholder.classList.remove('active'); placeholder.style.display = 'none'; }
+        if (reqView) reqView.classList.remove('active');
+        if (profileView) profileView.classList.remove('active');
+        if (chatActive) { chatActive.classList.add('active'); chatActive.style.display = 'flex'; }
+
+        // Highlight in sidebar
+        document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+        const chatItem = document.querySelector(`.chat-item[data-friend-id="${friend.id}"]`);
+        if (chatItem) chatItem.classList.add('active');
+
+        // Mobile
+        if (window.innerWidth <= 768) {
+            document.querySelector('.main-content')?.classList.add('mobile-open');
+            const backBtns = document.querySelectorAll('.back-btn');
+            backBtns.forEach(b => b.style.display = 'flex');
+        }
+
         await this.loadMessages();
+        document.getElementById('message-input')?.focus();
     },
 
     async loadMessages() {
         if (!this.activeChatUser) return;
-        const msgContainer = document.getElementById('chat-messages');
-        msgContainer.innerHTML = '<div class="spinner" style="margin: 20px auto; border-color: rgba(255,255,255,0.1); border-top-color: #6366f1;"></div>';
-        
+        const container = document.getElementById('chat-messages');
+        if (!container) return;
+        container.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;"><div class="loading-spinner" style="margin:0 auto;"></div></div>';
+
         try {
             const messages = await API.getMessages(this.activeChatUser.id);
-            msgContainer.innerHTML = '';
-            
-            for (const msg of messages) {
-                await this.renderMessage(msg, msgContainer);
+            container.innerHTML = '';
+            if (messages.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:30px;color:#94a3b8;font-size:.9rem;">Start the conversation! 👋</div>';
+                return;
             }
-            msgContainer.scrollTop = msgContainer.scrollHeight;
+            for (const msg of messages) await this.renderMessage(msg, container);
+            container.scrollTop = container.scrollHeight;
         } catch (err) {
-            console.error(err);
-            msgContainer.innerHTML = '<p style="text-align:center; color: var(--danger)">Failed to load messages</p>';
+            container.innerHTML = '<p style="text-align:center;color:#f43f5e;padding:20px;">Failed to load messages</p>';
         }
     },
 
     async renderMessage(msg, container) {
         const isSent = msg.sender_id === this.currentUser.id;
-        
         try {
-            // Determine which AES key to decrypt
             let targetAesKey = msg.encrypted_aes_key;
-            if (msg.encrypted_aes_key.includes("|||")) {
-                const keys = msg.encrypted_aes_key.split("|||");
+            if (msg.encrypted_aes_key.includes('|||')) {
+                const keys = msg.encrypted_aes_key.split('|||');
                 targetAesKey = isSent ? keys[1] : keys[0];
             } else {
-                if (isSent) throw new Error("Old messages do not have a sender key stored");
+                if (isSent) throw new Error('No sender key stored');
             }
-            
-            // 1. Decrypt AES Key using our Private RSA Key
             const aesKeyRaw = await CryptoUtil.decryptAESKeyWithRSA(targetAesKey, this.privateKey);
             const aesKey = await CryptoUtil.importAESKey(aesKeyRaw);
-            
-            // 2. Decrypt message content using AES Key
             const plaintext = await CryptoUtil.decryptMessage(msg.encrypted_content, aesKey);
-            
-            const timeStr = new Date(msg.timestamp + 'Z').toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-            
-            container.innerHTML += `
-                <div class="message ${isSent ? 'sent' : 'received'}">
-                    ${plaintext}
-                    <span class="message-time">${timeStr}</span>
-                </div>
-            `;
+            const timeStr = new Date(msg.timestamp + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const div = document.createElement('div');
+            div.className = `message ${isSent ? 'sent' : 'received'}`;
+            div.innerHTML = `${plaintext}<span class="msg-time">${timeStr}</span>`;
+            container.appendChild(div);
         } catch (err) {
-            console.error("Failed to decrypt message:", err);
-            container.innerHTML += `
-                <div class="message ${isSent ? 'sent' : 'received'}">
-                    <i class="fa-solid fa-triangle-exclamation" style="color: #fbbf24"></i> <i>Decryption Failed</i>
-                </div>
-            `;
+            const div = document.createElement('div');
+            div.className = `message ${isSent ? 'sent' : 'received'}`;
+            div.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:#fbbf24;"></i> <i>Decryption failed</i>';
+            container.appendChild(div);
         }
     },
 
     async handleSendMessage(e) {
         e.preventDefault();
         const input = document.getElementById('message-input');
-        const text = input.value.trim();
+        const text = input?.value.trim();
         if (!text || !this.activeChatUser) return;
-        
         input.value = '';
-        
+        this.closeEmojiPicker();
         try {
-            // 1. Get friend's public key AND our own public key
             const friendPubKey = await CryptoUtil.importPublicKey(this.activeChatUser.public_key);
             const myPubKey = await CryptoUtil.importPublicKey(this.currentUser.public_key);
-            
-            // 2. Generate a new AES key for this message
             const aesKey = await CryptoUtil.generateAESKey();
-            
-            // 3. Encrypt message with AES key
             const encryptedContent = await CryptoUtil.encryptMessage(text, aesKey);
-            
-            // 4. Encrypt AES key for BOTH users
             const aesKeyRaw = await CryptoUtil.exportAESKey(aesKey);
-            const friendEncryptedKey = await CryptoUtil.encryptAESKeyWithRSA(aesKeyRaw, friendPubKey);
-            const myEncryptedKey = await CryptoUtil.encryptAESKeyWithRSA(aesKeyRaw, myPubKey);
-            
-            // Combine them: friend_key|||my_key
-            const combinedAesKey = friendEncryptedKey + "|||" + myEncryptedKey;
-            
-            // 5. Send via WebSocket
-            API.sendWebSocketMessage(this.activeChatUser.id, encryptedContent, combinedAesKey);
-            
+            const friendEncKey = await CryptoUtil.encryptAESKeyWithRSA(aesKeyRaw, friendPubKey);
+            const myEncKey = await CryptoUtil.encryptAESKeyWithRSA(aesKeyRaw, myPubKey);
+            API.sendWebSocketMessage(this.activeChatUser.id, encryptedContent, `${friendEncKey}|||${myEncKey}`);
         } catch (err) {
             console.error(err);
-            alert("Failed to send message: " + err.message);
+            alert('Failed to send message: ' + err.message);
         }
     },
 
     async handleNewMessage(msg) {
-        if (this.activeChatUser && 
-           (msg.sender_id === this.activeChatUser.id || 
-           (msg.sender_id === this.currentUser.id && msg.receiver_id === this.activeChatUser.id))) {
-            
+        if (this.activeChatUser &&
+            (msg.sender_id === this.activeChatUser.id ||
+             (msg.sender_id === this.currentUser.id && msg.receiver_id === this.activeChatUser.id))) {
             const container = document.getElementById('chat-messages');
-            await this.renderMessage(msg, container);
-            container.scrollTop = container.scrollHeight;
+            if (container) {
+                // Remove "start conversation" placeholder if present
+                const empty = container.querySelector('div[style*="Start the conversation"]');
+                if (empty) empty.remove();
+                await this.renderMessage(msg, container);
+                container.scrollTop = container.scrollHeight;
+            }
         }
-        // Could also show a notification or unread badge here if chat isn't active
     },
 
     closeChat() {
         if (window.innerWidth <= 768) {
-            document.querySelector('.main-chat').classList.remove('mobile-open');
+            document.querySelector('.main-content')?.classList.remove('mobile-open');
             setTimeout(() => {
-                document.getElementById('chat-active').classList.remove('active');
-                document.getElementById('requests-view').classList.remove('active');
-                document.getElementById('profile-view').classList.remove('active');
-                document.getElementById('chat-placeholder').classList.add('active');
+                this._resetChatArea();
                 this.activeChatUser = null;
-                document.querySelectorAll('#friends-list .list-item').forEach(el => el.classList.remove('active-chat'));
-            }, 300); // Wait for transition
+                document.querySelectorAll('.chat-item').forEach(el => el.classList.remove('active'));
+            }, 300);
         }
     },
 
+    // ── PROFILE ──
     openProfileView() {
-        document.getElementById('chat-placeholder').classList.remove('active');
-        document.getElementById('chat-active').classList.remove('active');
-        document.getElementById('requests-view').classList.remove('active');
-        document.getElementById('profile-view').classList.add('active');
-        
-        document.querySelectorAll('#friends-list .list-item').forEach(el => el.classList.remove('active-chat'));
+        this._resetChatArea();
+        const profileView = document.getElementById('profile-view');
+        if (profileView) { profileView.classList.add('active'); profileView.style.display = 'flex'; }
         this.activeChatUser = null;
-
-        // Fill form with current data
-        document.getElementById('edit-username').value = this.currentUser.username;
-        document.getElementById('edit-display-name').value = this.currentUser.display_name || '';
-        document.getElementById('edit-bio').value = this.currentUser.bio || '';
-        
+        const editUsername = document.getElementById('edit-username');
+        const editName = document.getElementById('edit-display-name');
+        const editBio = document.getElementById('edit-bio');
+        if (editUsername) editUsername.value = this.currentUser?.username || '';
+        if (editName) editName.value = this.currentUser?.display_name || '';
+        if (editBio) editBio.value = this.currentUser?.bio || '';
         this.updateProfileUI();
-        
-        // Mobile slide-in
-        if (window.innerWidth <= 768) {
-            document.querySelector('.main-chat').classList.add('mobile-open');
-        }
+        if (window.innerWidth <= 768) document.querySelector('.main-content')?.classList.add('mobile-open');
     },
 
     updateProfileUI() {
         if (!this.currentUser) return;
-        
-        const displayName = this.currentUser.display_name || this.currentUser.username;
-        document.getElementById('current-username').innerText = displayName;
-        
-        if (document.getElementById('profile-display-name-heading')) {
-            document.getElementById('profile-display-name-heading').innerText = displayName;
-            document.getElementById('profile-username-sub').innerText = `@${this.currentUser.username}`;
-            document.getElementById('key-status-text').innerText = this.privateKey ? 'Loaded' : 'Not Found';
-            document.getElementById('key-status-text').className = `status-badge ${this.privateKey ? 'success' : 'danger'}`;
-            
-            // Device detection
+        const name = this.currentUser.display_name || this.currentUser.username;
+        const nameEl = document.getElementById('current-username');
+        if (nameEl) nameEl.innerText = name;
+        const avatarEl = document.getElementById('sidebar-avatar');
+        if (avatarEl) avatarEl.textContent = name.charAt(0).toUpperCase();
+        const bigAvatar = document.getElementById('profile-big-avatar');
+        if (bigAvatar) bigAvatar.textContent = name.charAt(0).toUpperCase();
+        const headingEl = document.getElementById('profile-display-name-heading');
+        if (headingEl) headingEl.innerText = name;
+        const subEl = document.getElementById('profile-username-sub');
+        if (subEl) subEl.innerText = `@${this.currentUser.username}`;
+        const keyStatus = document.getElementById('key-status-text');
+        if (keyStatus) {
+            keyStatus.innerText = this.privateKey ? 'Loaded ✓' : 'Not Found';
+            keyStatus.className = this.privateKey ? 'text-green' : '';
+            keyStatus.style.color = this.privateKey ? '' : '#f43f5e';
+        }
+        const deviceEl = document.getElementById('device-info-text');
+        if (deviceEl) {
             const ua = navigator.userAgent;
-            let device = "Unknown Device";
-            if (/android/i.test(ua)) device = "Android Device";
-            else if (/iPhone|iPad|iPod/i.test(ua)) device = "iOS Device";
-            else if (/Windows/i.test(ua)) device = "Windows PC";
-            else if (/Macintosh/i.test(ua)) device = "Apple Mac";
-            else if (/Linux/i.test(ua)) device = "Linux PC";
-            
-            document.getElementById('device-info-text').innerText = `${device} (This Browser)`;
+            let device = 'Unknown Device';
+            if (/android/i.test(ua)) device = 'Android Device';
+            else if (/iPhone|iPad|iPod/i.test(ua)) device = 'iOS Device';
+            else if (/Windows/i.test(ua)) device = 'Windows PC';
+            else if (/Macintosh/i.test(ua)) device = 'Apple Mac';
+            else if (/Linux/i.test(ua)) device = 'Linux PC';
+            deviceEl.innerText = `${device} (This Browser)`;
         }
     },
 
     async handleUpdateProfile(e) {
         e.preventDefault();
-        const username = document.getElementById('edit-username').value.trim();
-        const displayName = document.getElementById('edit-display-name').value.trim();
-        const bio = document.getElementById('edit-bio').value.trim();
-        
+        const username = document.getElementById('edit-username')?.value.trim();
+        const displayName = document.getElementById('edit-display-name')?.value.trim();
+        const bio = document.getElementById('edit-bio')?.value.trim();
         if (!username) return;
-        
         try {
-            this.showLoading('Updating profile...');
-            const updatedUser = await API.updateProfile({
-                username: username,
-                display_name: displayName,
-                bio: bio
-            });
-            
-            // If username changed, we might need to update local storage key for private key
+            this.showLoading('Saving profile...');
             if (username !== this.currentUser.username) {
                 const privKey = localStorage.getItem(`privKey_${this.currentUser.username}`);
                 if (privKey) {
@@ -506,10 +553,10 @@ const ui = {
                     localStorage.removeItem(`privKey_${this.currentUser.username}`);
                 }
             }
-            
-            this.currentUser = updatedUser;
+            const updated = await API.updateProfile({ username, display_name: displayName, bio });
+            this.currentUser = updated;
             this.updateProfileUI();
-            alert('Profile updated successfully!');
+            alert('Profile saved!');
             this.goToChats();
         } catch (err) {
             alert(err.message);
@@ -517,63 +564,36 @@ const ui = {
             this.hideLoading();
         }
     },
-    
-    toggleEmojiPicker() {
-        const container = document.getElementById('emoji-picker-container');
-        container.style.display = container.style.display === 'none' ? 'block' : 'none';
+
+    // ── FRIENDS VIEW ──
+    openFriendRequestsView() {
+        this._resetChatArea();
+        const reqView = document.getElementById('requests-view');
+        if (reqView) { reqView.classList.add('active'); reqView.style.display = 'flex'; }
+        this.activeChatUser = null;
+        if (window.innerWidth <= 768) document.querySelector('.main-content')?.classList.add('mobile-open');
     },
 
+    goToChats() {
+        this._resetChatArea();
+        if (window.innerWidth <= 768) document.querySelector('.main-content')?.classList.remove('mobile-open');
+        const nav = document.getElementById('nav-chats');
+        document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+        if (nav) nav.classList.add('active');
+    },
+
+    // ── FILTER ──
     setFilter(chipEl) {
-        // Toggle active class on chips
-        document.querySelectorAll('.filter-chip').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.chip').forEach(b => b.classList.remove('active'));
         chipEl.classList.add('active');
-
         const filter = chipEl.dataset.filter;
-        const friendsSection = document.querySelector('.sidebar-sections .section-title');
-        const items = document.querySelectorAll('#friends-list .list-item');
-
-        if (filter === 'all') {
-            if (friendsSection) friendsSection.textContent = 'Chats';
-            items.forEach(item => item.style.display = '');
-        } else if (filter === 'unread') {
-            if (friendsSection) friendsSection.textContent = 'Unread Messages';
-            // Show items with an unread badge, hide others
+        const items = document.querySelectorAll('#friends-list .chat-item');
+        items.forEach(item => item.style.display = '');
+        if (filter === 'unread') {
             items.forEach(item => {
                 const badge = item.querySelector('.unread-badge');
                 item.style.display = badge ? '' : 'none';
             });
-        } else if (filter === 'missed') {
-            if (friendsSection) friendsSection.textContent = 'Missed Calls';
-            // Placeholder: hide all since calls aren't implemented yet
-            items.forEach(item => item.style.display = 'none');
-            const container = document.getElementById('friends-list');
-            if (!container.querySelector('.filter-empty')) {
-                const msg = document.createElement('p');
-                msg.className = 'filter-empty text-muted';
-                msg.style.cssText = 'text-align:center; padding:20px; font-style:italic; font-size:0.85rem;';
-                msg.textContent = 'No missed calls';
-                container.appendChild(msg);
-            }
-        } else if (filter === 'contacts') {
-            if (friendsSection) friendsSection.textContent = 'Contacts';
-            items.forEach(item => item.style.display = '');
-        }
-
-        // Remove stale empty messages on filter switch
-        if (filter !== 'missed') {
-            document.querySelectorAll('#friends-list .filter-empty').forEach(el => el.remove());
-        }
-    },
-
-    goToChats() {
-        document.getElementById('profile-view').classList.remove('active');
-        document.getElementById('requests-view').classList.remove('active');
-        document.getElementById('chat-active').classList.remove('active');
-        document.getElementById('chat-placeholder').classList.add('active');
-        
-        // On mobile, close the sidebar-main split
-        if (window.innerWidth <= 768) {
-            document.querySelector('.main-chat').classList.remove('mobile-open');
         }
     }
 };
