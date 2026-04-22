@@ -109,7 +109,8 @@ const API = {
     connectWebSocket(onMessageReceived) {
         if (!this.token) return;
 
-        const wsUrl = `ws://${window.location.host}/ws?token=${this.token}`;
+        const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${protocol}//${window.location.host}/ws?token=${this.token}`;
         this.socket = new WebSocket(wsUrl);
 
         this.socket.onopen = () => console.log("WebSocket connected");
