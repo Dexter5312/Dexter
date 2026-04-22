@@ -439,15 +439,30 @@ const ui = {
             const aesKey = await CryptoUtil.importAESKey(aesKeyRaw);
             const plaintext = await CryptoUtil.decryptMessage(msg.encrypted_content, aesKey);
             const timeStr = new Date(msg.timestamp + 'Z').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const div = document.createElement('div');
-            div.className = `message ${isSent ? 'sent' : 'received'}`;
-            div.innerHTML = `${plaintext}<span class="msg-time">${timeStr}</span>`;
-            container.appendChild(div);
+
+            // Wrapper row (positions bubble left/right + timestamp outside bubble)
+            const row = document.createElement('div');
+            row.className = `msg-row ${isSent ? 'sent' : 'received'}`;
+
+            const bubble = document.createElement('div');
+            bubble.className = `message ${isSent ? 'sent' : 'received'}`;
+            bubble.textContent = plaintext;
+
+            const time = document.createElement('span');
+            time.className = 'msg-time';
+            time.textContent = timeStr;
+
+            row.appendChild(bubble);
+            row.appendChild(time);
+            container.appendChild(row);
         } catch (err) {
-            const div = document.createElement('div');
-            div.className = `message ${isSent ? 'sent' : 'received'}`;
-            div.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:#fbbf24;"></i> <i>Decryption failed</i>';
-            container.appendChild(div);
+            const row = document.createElement('div');
+            row.className = `msg-row ${isSent ? 'sent' : 'received'}`;
+            const bubble = document.createElement('div');
+            bubble.className = `message ${isSent ? 'sent' : 'received'}`;
+            bubble.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color:#fbbf24;"></i> <i>Decryption failed</i>';
+            row.appendChild(bubble);
+            container.appendChild(row);
         }
     },
 

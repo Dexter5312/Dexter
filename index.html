@@ -172,9 +172,11 @@
                     </button>
                     <div class="chat-peer-info">
                         <div class="chat-peer-avatar" id="chat-peer-avatar">?</div>
-                        <div>
+                        <div class="chat-peer-text">
                             <div class="chat-peer-name" id="active-chat-username">Friend</div>
-                            <div class="chat-peer-status"><span class="dot-online"></span> Online &bull; E2EE Active</div>
+                            <div class="chat-peer-status">
+                                <span class="dot-online"></span> Online &bull; E2EE Active
+                            </div>
                         </div>
                     </div>
                     <div class="chat-actions">
@@ -200,18 +202,23 @@
                         <emoji-picker id="emoji-picker-el"></emoji-picker>
                     </div>
                     <div class="input-row">
-                        <button type="button" class="input-icon-btn emoji-trigger" id="emoji-trigger-btn" onclick="ui.toggleEmojiPicker()" title="Emoji">
-                            <i class="fa-regular fa-face-smile"></i>
-                        </button>
-                        <form class="input-form" onsubmit="ui.handleSendMessage(event)" style="flex:1;display:flex;gap:8px;">
-                            <input type="text" id="message-input" placeholder="Type a message..." autocomplete="off">
+                        <div class="input-left-actions">
+                            <button type="button" class="input-icon-btn emoji-trigger" id="emoji-trigger-btn" onclick="ui.toggleEmojiPicker()" title="Emoji">
+                                <i class="fa-regular fa-face-smile"></i>
+                            </button>
+                            <button type="button" class="input-icon-btn" title="Attach file">
+                                <i class="fa-solid fa-paperclip"></i>
+                            </button>
+                        </div>
+                        <form class="input-form" onsubmit="ui.handleSendMessage(event)">
+                            <input type="text" id="message-input" placeholder="Type a secure message..." autocomplete="off">
                             <button type="submit" class="send-btn" title="Send">
                                 <i class="fa-solid fa-paper-plane"></i>
                             </button>
                         </form>
                     </div>
                     <div class="input-hint">
-                        <i class="fa-solid fa-lock"></i> Messages are end-to-end encrypted
+                        <i class="fa-solid fa-lock"></i> End-to-end encrypted &bull; Dexter
                     </div>
                 </div>
             </div>
