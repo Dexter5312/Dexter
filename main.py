@@ -27,7 +27,13 @@ app.add_middleware(
 )
 
 # Mount static files for the frontend
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/js", StaticFiles(directory="js"), name="js")
+app.mount("/css", StaticFiles(directory="css"), name="css")
+import os
+if os.path.exists("logo.png"):
+    @app.get("/logo.png")
+    def get_logo():
+        return FileResponse("logo.png")
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 

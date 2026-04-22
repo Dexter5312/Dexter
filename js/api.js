@@ -16,21 +16,39 @@ const API = {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ username, password, public_key: publicKey })
         });
-        if (!res.ok) throw new Error((await res.json()).detail);
+        
+        if (!res.ok) {
+            let detail = 'Registration failed';
+            try {
+                const errJson = await res.json();
+                detail = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
+            } catch (e) {}
+            throw new Error(detail);
+        }
         return await res.json();
     },
 
     async login(username, password) {
         const formData = new URLSearchParams();
+        formData.append('grant_type', 'password');
         formData.append('username', username);
         formData.append('password', password);
 
         const res = await fetch(`${this.baseUrl}/token`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: formData
+            body: formData.toString()
         });
-        if (!res.ok) throw new Error((await res.json()).detail);
+        
+        if (!res.ok) {
+            let detail = 'Login failed';
+            try {
+                const errJson = await res.json();
+                detail = typeof errJson.detail === 'string' ? errJson.detail : JSON.stringify(errJson.detail);
+            } catch (e) {}
+            throw new Error(detail);
+        }
+        
         const data = await res.json();
         this.token = data.access_token;
         localStorage.setItem('access_token', this.token);

@@ -58,8 +58,13 @@ const ui = {
                 
                 // Load private key
                 const privKeyJwk = localStorage.getItem(`privKey_${username}`);
-                if (!privKeyJwk) throw new Error("Private key not found on this device. Cannot decrypt messages.");
-                this.privateKey = await CryptoUtil.importPrivateKey(privKeyJwk);
+                if (privKeyJwk) {
+                    this.privateKey = await CryptoUtil.importPrivateKey(privKeyJwk);
+                } else {
+                    console.warn("Private key not found on this device.");
+                    alert("Warning: Your encryption keys were not found on this device. You will not be able to decrypt past messages.");
+                    this.privateKey = null;
+                }
             }
             
             await this.initDashboard();
@@ -190,6 +195,11 @@ const ui = {
         
         document.querySelectorAll('#friends-list .list-item').forEach(el => el.classList.remove('active-chat'));
         this.activeChatUser = null;
+        
+        // Mobile slide-in
+        if (window.innerWidth <= 768) {
+            document.querySelector('.main-chat').classList.add('mobile-open');
+        }
     },
 
     async handleSearchUser(e) {
@@ -234,6 +244,11 @@ const ui = {
         document.getElementById('requests-view').classList.remove('active');
         document.getElementById('chat-active').classList.add('active');
         document.getElementById('active-chat-username').innerText = this.activeChatUser.username;
+        
+        // Mobile slide-in
+        if (window.innerWidth <= 768) {
+            document.querySelector('.main-chat').classList.add('mobile-open');
+        }
         
         // Load messages
         await this.loadMessages();
@@ -328,5 +343,18 @@ const ui = {
             container.scrollTop = container.scrollHeight;
         }
         // Could also show a notification or unread badge here if chat isn't active
+    },
+
+    closeChat() {
+        if (window.innerWidth <= 768) {
+            document.querySelector('.main-chat').classList.remove('mobile-open');
+            setTimeout(() => {
+                document.getElementById('chat-active').classList.remove('active');
+                document.getElementById('requests-view').classList.remove('active');
+                document.getElementById('chat-placeholder').classList.add('active');
+                this.activeChatUser = null;
+                document.querySelectorAll('#friends-list .list-item').forEach(el => el.classList.remove('active-chat'));
+            }, 300); // Wait for transition
+        }
     }
 };
