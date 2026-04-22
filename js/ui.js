@@ -238,8 +238,13 @@ const ui = {
             let pendingCount = 0;
 
             for (const req of requests) {
+                // API returns: { id, sender: {id, username, public_key}, receiver: {id, username, public_key}, status }
+                const sender = req.sender;
+                const receiver = req.receiver;
+                if (!sender || !receiver) continue;
+
                 if (req.status === 'pending') {
-                    const isReceiver = req.receiver_id === this.currentUser.id;
+                    const isReceiver = receiver.id === this.currentUser.id;
                     if (isReceiver) {
                         pendingCount++;
                         this._renderPendingRequest(req, pendingList);
@@ -247,15 +252,14 @@ const ui = {
                         this._renderSentRequest(req, sentList);
                     }
                 } else if (req.status === 'accepted') {
-                    const friendId = req.sender_id === this.currentUser.id ? req.receiver_id : req.sender_id;
-                    const friendUsername = req.sender_id === this.currentUser.id ? req.receiver_username : req.sender_username;
-                    const friendPublicKey = req.sender_id === this.currentUser.id ? req.receiver_public_key : req.sender_public_key;
-                    this.friends[friendId] = { id: friendId, username: friendUsername, public_key: friendPublicKey };
-                    this._renderFriendItem({ id: friendId, username: friendUsername, public_key: friendPublicKey }, friendsEl);
+                    const isSender = sender.id === this.currentUser.id;
+                    const friend = isSender ? receiver : sender;
+                    this.friends[friend.id] = friend;
+                    this._renderFriendItem(friend, friendsEl);
                 }
             }
 
-            // Badge
+            // Update badges
             const pip = document.getElementById('nav-pip');
             const badge = document.getElementById('request-count-badge');
             const countEl = document.getElementById('request-count');
@@ -263,8 +267,9 @@ const ui = {
             if (badge) { badge.style.display = pendingCount > 0 ? 'block' : 'none'; badge.textContent = pendingCount; }
             if (countEl) countEl.textContent = pendingCount;
 
-            if (friendsEl && Object.keys(this.friends).length === 0 && !friendsEl.querySelector('.empty-chat-list')) {
-                friendsEl.innerHTML = '<div class="empty-chat-list"><i class="fa-regular fa-comment-dots"></i><p>No conversations yet</p><small>Add friends to start chatting</small></div>';
+            if (friendsEl && Object.keys(this.friends).length === 0) {
+                const empty = friendsEl.querySelector('.empty-chat-list');
+                if (!empty) friendsEl.innerHTML = '<div class="empty-chat-list"><i class="fa-regular fa-comment-dots"></i><p>No conversations yet</p><small>Add friends to start chatting</small></div>';
             }
         } catch (err) {
             console.error('Failed to load friend requests:', err);
@@ -293,7 +298,9 @@ const ui = {
 
     _renderPendingRequest(req, container) {
         if (!container) return;
-        const username = req.sender_username || `User #${req.sender_id}`;
+        // Use nested sender object from API
+        const sender = req.sender || {};
+        const username = sender.username || `User #${req.id}`;
         const initial = username.charAt(0).toUpperCase();
         const div = document.createElement('div');
         div.className = 'req-item';
@@ -302,7 +309,7 @@ const ui = {
                 <div class="req-avatar">${initial}</div>
                 <div class="req-meta">
                     <span class="req-name">${username}</span>
-                    <span class="req-sub">Wants to connect</span>
+                    <span class="req-sub">Wants to connect with you</span>
                 </div>
             </div>
             <div class="req-actions">
@@ -314,7 +321,9 @@ const ui = {
 
     _renderSentRequest(req, container) {
         if (!container) return;
-        const username = req.receiver_username || `User #${req.receiver_id}`;
+        // Use nested receiver object from API
+        const receiver = req.receiver || {};
+        const username = receiver.username || `User #${req.id}`;
         const initial = username.charAt(0).toUpperCase();
         const div = document.createElement('div');
         div.className = 'req-item';
@@ -323,7 +332,7 @@ const ui = {
                 <div class="req-avatar">${initial}</div>
                 <div class="req-meta">
                     <span class="req-name">${username}</span>
-                    <span class="req-sub">Request sent — pending</span>
+                    <span class="req-sub" style="color:#f59e0b;">Request pending...</span>
                 </div>
             </div>
         `;
@@ -595,5 +604,18 @@ const ui = {
                 item.style.display = badge ? '' : 'none';
             });
         }
+    },
+
+    _showToast(message, duration = 4000) {
+        let toast = document.getElementById('dexter-toast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'dexter-toast';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = message;
+        toast.classList.add('toast-visible');
+        clearTimeout(this._toastTimer);
+        this._toastTimer = setTimeout(() => toast.classList.remove('toast-visible'), duration);
     }
 };

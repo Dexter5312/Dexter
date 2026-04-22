@@ -105,7 +105,7 @@ def get_user(username: str, db: Session = Depends(get_db), current_user: models.
     return user
 
 @app.post("/friend-requests", response_model=schemas.FriendRequestResponse)
-def send_friend_request(req: schemas.FriendRequestCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
+async def send_friend_request(req: schemas.FriendRequestCreate, db: Session = Depends(get_db), current_user: models.User = Depends(get_current_user)):
     receiver = db.query(models.User).filter(models.User.username == req.receiver_username).first()
     if not receiver:
         raise HTTPException(status_code=404, detail="Receiver not found")
@@ -124,6 +124,16 @@ def send_friend_request(req: schemas.FriendRequestCreate, db: Session = Depends(
     db.add(new_req)
     db.commit()
     db.refresh(new_req)
+    import asyncio
+    try:
+        await manager.send_personal_message(__import__("json").dumps({
+            "type": "friend_request",
+            "from_id": current_user.id,
+            "from_username": current_user.username,
+            "request_id": new_req.id
+        }), receiver.id)
+    except Exception:
+        pass
     return new_req
 
 @app.get("/friend-requests", response_model=List[schemas.FriendRequestResponse])

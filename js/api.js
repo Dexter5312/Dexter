@@ -141,6 +141,12 @@ const API = {
             const CALL_TYPES = ['call_offer','call_answer','ice_candidate','call_reject','call_end'];
             if (data.type === 'new_message') {
                 onMessageReceived(data.message);
+            } else if (data.type === 'friend_request') {
+                // Real-time friend request notification
+                if (typeof ui !== 'undefined') {
+                    ui.loadFriendRequests();
+                    ui._showToast(`📨 ${data.from_username} sent you a friend request!`);
+                }
             } else if (CALL_TYPES.includes(data.type)) {
                 if (typeof Call !== 'undefined') Call.handleSignal(data);
             }
