@@ -65,7 +65,11 @@ const API = {
 
     async getCurrentUser() {
         const res = await fetch(`${this.baseUrl}/users/me`, { headers: this.headers() });
-        if (!res.ok) throw new Error('Not authenticated');
+        if (res.status === 401) {
+            this.logout();
+            throw new Error('Not authenticated');
+        }
+        if (!res.ok) throw new Error('Failed to fetch user');
         return await res.json();
     },
 
