@@ -15,8 +15,21 @@ const ui = {
     },
 
     switchView(viewId) {
-        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
-        document.getElementById(viewId).classList.add('active');
+        // Force hide everything
+        document.querySelectorAll('.view').forEach(v => {
+            v.style.display = 'none';
+            v.classList.remove('active');
+        });
+        
+        // Show only the target
+        const target = document.getElementById(viewId);
+        if (target) {
+            target.style.display = 'flex';
+            target.classList.add('active');
+        }
+        
+        // Reset scroll
+        window.scrollTo(0, 0);
     },
 
     switchAuthTab(mode) {
