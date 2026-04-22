@@ -138,8 +138,11 @@ const API = {
 
         this.socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
+            const CALL_TYPES = ['call_offer','call_answer','ice_candidate','call_reject','call_end'];
             if (data.type === 'new_message') {
                 onMessageReceived(data.message);
+            } else if (CALL_TYPES.includes(data.type)) {
+                if (typeof Call !== 'undefined') Call.handleSignal(data);
             }
         };
 
@@ -156,6 +159,14 @@ const API = {
             }));
         } else {
             throw new Error("WebSocket not connected");
+        }
+    },
+
+    sendCallSignal(payload) {
+        if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+            this.socket.send(JSON.stringify(payload));
+        } else {
+            console.warn("WebSocket not ready for call signal");
         }
     }
 };

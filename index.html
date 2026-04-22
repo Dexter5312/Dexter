@@ -143,10 +143,15 @@
                         </div>
                         <div class="chat-header-info">
                             <span id="active-chat-username">Friend</span>
-                            <span class="status-text">Online — Secure Connection</span>
+                            <span class="status-text">Online &mdash; Secure Connection</span>
                         </div>
-                        <div class="encryption-badge" title="End-to-End Encrypted">
-                            <i class="fa-solid fa-shield-halved"></i> E2EE Active
+                        <div class="chat-header-actions">
+                            <button class="call-icon-btn" onclick="Call.startCall(ui.activeChatUser?.id, ui.activeChatUser?.username, 'audio')" title="Voice Call">
+                                <i class="fa-solid fa-phone"></i>
+                            </button>
+                            <button class="call-icon-btn" onclick="Call.startCall(ui.activeChatUser?.id, ui.activeChatUser?.username, 'video')" title="Video Call">
+                                <i class="fa-solid fa-video"></i>
+                            </button>
                         </div>
                     </div>
 
@@ -296,7 +301,48 @@
         </div>
     </div>
 
-    <!-- Modals & Overlays -->
+    <!-- Call Overlay -->
+    <div id="call-overlay" style="display:none; position:fixed; inset:0; z-index:2000; background:rgba(0,0,0,0.85); backdrop-filter:blur(12px); flex-direction:column; justify-content:center; align-items:center; gap:24px; color:white;">
+        
+        <!-- Video containers -->
+        <div id="call-video-container" style="display:none; position:relative; width:100%; max-width:680px; border-radius:24px; overflow:hidden;">
+            <video id="remote-video" autoplay playsinline style="width:100%; height:400px; object-fit:cover; background:#111;"></video>
+            <video id="local-video" autoplay playsinline muted style="position:absolute; bottom:16px; right:16px; width:120px; border-radius:12px; border:2px solid white;"></video>
+        </div>
+        <audio id="remote-audio" autoplay></audio>
+
+        <!-- Avatar + name -->
+        <div style="text-align:center;">
+            <div style="width:80px;height:80px;background:linear-gradient(135deg,#0ea5e9,#7dd3fc);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:2rem;"><i id="call-type-icon" class="fa-solid fa-phone"></i></div>
+            <h2 id="call-username-display" style="font-size:1.5rem;font-weight:700;margin-bottom:6px;">Friend</h2>
+            <p id="call-status-text" style="color:rgba(255,255,255,0.6);font-size:0.9rem;">Calling...</p>
+            <p id="call-timer" style="font-size:1.2rem;font-weight:700;margin-top:4px;">00:00</p>
+        </div>
+
+        <!-- Incoming call buttons -->
+        <div id="call-incoming" style="display:none; flex-direction:column; align-items:center; gap:16px;">
+            <p style="color:rgba(255,255,255,0.7);">Incoming call...</p>
+            <div style="display:flex;gap:24px;">
+                <button onclick="Call.rejectCall()" style="width:64px;height:64px;border-radius:50%;background:#f43f5e;border:none;color:white;font-size:1.5rem;cursor:pointer;"><i class="fa-solid fa-phone-slash"></i></button>
+                <button onclick="Call.acceptCall()" style="width:64px;height:64px;border-radius:50%;background:#10b981;border:none;color:white;font-size:1.5rem;cursor:pointer;"><i class="fa-solid fa-phone"></i></button>
+            </div>
+        </div>
+
+        <!-- Outgoing call buttons -->
+        <div id="call-outgoing" style="display:none; flex-direction:column; align-items:center; gap:16px;">
+            <p style="color:rgba(255,255,255,0.7);">Ringing...</p>
+            <button onclick="Call.endCall()" style="width:64px;height:64px;border-radius:50%;background:#f43f5e;border:none;color:white;font-size:1.5rem;cursor:pointer;"><i class="fa-solid fa-phone-slash"></i></button>
+        </div>
+
+        <!-- Active call controls -->
+        <div id="call-active" style="display:none; gap:16px;">
+            <button id="call-mute-btn" onclick="Call.toggleMute()" style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-microphone"></i></button>
+            <button id="call-video-btn" onclick="Call.toggleVideo()" style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,0.15);border:none;color:white;font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-video"></i></button>
+            <button onclick="Call.endCall()" style="width:52px;height:52px;border-radius:50%;background:#f43f5e;border:none;color:white;font-size:1.1rem;cursor:pointer;"><i class="fa-solid fa-phone-slash"></i></button>
+        </div>
+    </div>
+
+    <!-- Loading Overlay -->
     <div id="loading-overlay" class="overlay">
         <div class="spinner"></div>
         <p id="loading-text">Loading...</p>
@@ -305,10 +351,11 @@
         // This tells your app to talk to your live Render server
         window.API_URL = "https://dexter-3-v8rb.onrender.com";
     </script>
-    <script src="js/crypto.js?v=6"></script>
-    <script src="js/api.js?v=6"></script>
-    <script src="js/ui.js?v=7"></script>
-    <script src="js/main.js?v=6"></script>
+    <script src="js/crypto.js?v=7"></script>
+    <script src="js/api.js?v=7"></script>
+    <script src="js/call.js?v=1"></script>
+    <script src="js/ui.js?v=8"></script>
+    <script src="js/main.js?v=7"></script>
 </body>
 
 </html>

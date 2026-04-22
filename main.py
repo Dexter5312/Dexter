@@ -258,5 +258,13 @@ async def websocket_endpoint(websocket: WebSocket, token: str, db: Session = Dep
                         }
                     }), user.id)
 
+            # --- WebRTC Call Signaling ---
+            elif message_data.get('type') in ['call_offer', 'call_answer', 'ice_candidate', 'call_reject', 'call_end']:
+                target_id = message_data.get('target_id')
+                if target_id:
+                    message_data['from_id'] = user.id
+                    message_data['from_username'] = user.username
+                    await manager.send_personal_message(json.dumps(message_data), target_id)
+
     except WebSocketDisconnect:
         manager.disconnect(user.id)
